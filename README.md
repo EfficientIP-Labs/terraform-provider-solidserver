@@ -1,12 +1,5 @@
 [![License](https://img.shields.io/badge/License-BSD%202--Clause-blue.svg)](https://opensource.org/licenses/BSD-2-Clause) [![Go Report Card](https://goreportcard.com/badge/github.com/EfficientIP-Labs/terraform-provider-solidserver)](https://goreportcard.com/report/github.com/EfficientIP-Labs/terraform-provider-solidserver)
 
----
-**IMPORTANT**
-
-The official repository for this project is now managed by EfficientIP-Labs and available [here](https://github.com/EfficientIP-Labs/terraform-provider-solidserver)
-
----
-
 # EfficientIP SOLIDserver Provider
 This provider allows to easily interact with EfficientIP's [SOLIDserver](https://www.efficientip.com/products/solidserver/) REST API.
 It allows to manage supported resources through CRUD operations for efficient DDI orchestration.

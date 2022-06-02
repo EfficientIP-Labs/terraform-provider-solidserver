@@ -3,12 +3,13 @@ package solidserver
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
 	"log"
 	"net/url"
 	"regexp"
 	"strings"
+
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
 )
 
 func resourceipaddress() *schema.Resource {
@@ -405,6 +406,7 @@ func resourceipaddressRead(d *schema.ResourceData, meta interface{}) error {
 			}
 
 			d.Set("class", buf[0]["ip_class_name"].(string))
+			d.Set("pool", buf[0]["pool_name"].(string))
 
 			// Updating local class_parameters
 			currentClassParameters := d.Get("class_parameters").(map[string]interface{})
@@ -466,6 +468,7 @@ func resourceipaddressImportState(d *schema.ResourceData, meta interface{}) ([]*
 			d.Set("name", buf[0]["name"].(string))
 			d.Set("mac", buf[0]["mac_addr"].(string))
 			d.Set("class", buf[0]["ip_class_name"].(string))
+			d.Set("pool", buf[0]["pool_name"].(string))
 
 			// Updating local class_parameters
 			currentClassParameters := d.Get("class_parameters").(map[string]interface{})
