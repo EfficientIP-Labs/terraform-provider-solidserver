@@ -3,14 +3,15 @@ package solidserver
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
 	"log"
 	"math/big"
 	"math/rand"
 	"net/url"
 	"strconv"
 	"time"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
 
 func resourceip6subnet() *schema.Resource {
@@ -40,7 +41,7 @@ func resourceip6subnet() *schema.Resource {
 			"request_ip": {
 				Type:         schema.TypeString,
 				Description:  "The optionally requested subnet IPv6 address.",
-				ValidateFunc: validation.SingleIP(),
+				ValidateFunc: validation.IsIPAddress,
 				Optional:     true,
 				ForceNew:     true,
 				Default:      "",

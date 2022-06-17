@@ -3,12 +3,13 @@ package solidserver
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
 	"log"
 	"net/url"
 	"strconv"
 	"strings"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
 
 func resourceippool() *schema.Resource {
@@ -38,7 +39,7 @@ func resourceippool() *schema.Resource {
 			"start": {
 				Type:         schema.TypeString,
 				Description:  "The IP pool lower IP address.",
-				ValidateFunc: validation.SingleIP(),
+				ValidateFunc: validation.IsIPAddress,
 				Required:     true,
 				ForceNew:     true,
 			},

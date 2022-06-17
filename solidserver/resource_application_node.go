@@ -3,12 +3,13 @@ package solidserver
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
 	"log"
 	"net/url"
 	"strconv"
 	"strings"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
 
 func resourceapplicationnode() *schema.Resource {
@@ -51,7 +52,7 @@ func resourceapplicationnode() *schema.Resource {
 			"address": {
 				Type:         schema.TypeString,
 				Description:  "The IP address (IPv4 or IPv6 depending on the node) of the application node to create.",
-				ValidateFunc: validation.SingleIP(),
+				ValidateFunc: validation.IsIPAddress,
 				Optional:     true,
 				ForceNew:     true,
 				Default:      "ipv4",
