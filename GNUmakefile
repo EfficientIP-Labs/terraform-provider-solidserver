@@ -48,8 +48,7 @@ release:
 	if ! [ -d "./_releases/$(RELEASE)/terraform-provider-solidserver_$(RELEASE)_windows_amd64" ]; then mkdir "./_releases/$(RELEASE)/terraform-provider-solidserver_$(RELEASE)_windows_amd64"; fi
 	if ! [ -d "./_releases/$(RELEASE)/terraform-provider-solidserver_$(RELEASE)_darwin_arm64" ]; then mkdir "./_releases/$(RELEASE)/terraform-provider-solidserver_$(RELEASE)_darwin_arm64"; fi
 	if ! [ -d "./_releases/$(RELEASE)/terraform-provider-solidserver_$(RELEASE)_darwin_amd64" ]; then mkdir "./_releases/$(RELEASE)/terraform-provider-solidserver_$(RELEASE)_darwin_amd64"; fi
-	if [ -d "./_releases/$(RELEASE)" ]; then rm -rf "./_releases/$(RELEASE)"; fi
-	
+
 	cp -r ./README.md ./LICENSE ./_releases/$(RELEASE)/terraform-provider-solidserver_$(RELEASE)_linux_arm/
 	cp -r ./README.md ./LICENSE ./_releases/$(RELEASE)/terraform-provider-solidserver_$(RELEASE)_linux_arm64/
 	cp -r ./README.md ./LICENSE ./_releases/$(RELEASE)/terraform-provider-solidserver_$(RELEASE)_linux_amd64/
