@@ -38,16 +38,18 @@ release:
 	go get -v ./...
 	go mod tidy
 	go mod vendor
+	if ! [ -d './_releases' ]; then mkdir './_release'; fi
+	if ! [ -d "./_releases/$(RELEASE)" ]; then mkdir "./_releases/$(RELEASE)"; else rm -rf ./_releases/$(RELEASE)/*; fi
+
+	if ! [ -d "./_releases/$(RELEASE)/terraform-provider-solidserver_$(RELEASE)_linux_arm" ]; then mkdir "./_releases/$(RELEASE)/terraform-provider-solidserver_$(RELEASE)_linux_arm"; fi
+	if ! [ -d "./_releases/$(RELEASE)/terraform-provider-solidserver_$(RELEASE)_linux_arm64" ]; then mkdir "./_releases/$(RELEASE)/terraform-provider-solidserver_$(RELEASE)_linux_arm64"; fi
+	if ! [ -d "./_releases/$(RELEASE)/terraform-provider-solidserver_$(RELEASE)_linux_amd64" ]; then mkdir "./_releases/$(RELEASE)/terraform-provider-solidserver_$(RELEASE)_linux_amd64"; fi
+	if ! [ -d "./_releases/$(RELEASE)/terraform-provider-solidserver_$(RELEASE)_freebsd_amd64" ]; then mkdir "./_releases/$(RELEASE)/terraform-provider-solidserver_$(RELEASE)_freebsd_amd64"; fi
+	if ! [ -d "./_releases/$(RELEASE)/terraform-provider-solidserver_$(RELEASE)_windows_amd64" ]; then mkdir "./_releases/$(RELEASE)/terraform-provider-solidserver_$(RELEASE)_windows_amd64"; fi
+	if ! [ -d "./_releases/$(RELEASE)/terraform-provider-solidserver_$(RELEASE)_darwin_arm64" ]; then mkdir "./_releases/$(RELEASE)/terraform-provider-solidserver_$(RELEASE)_darwin_arm64"; fi
+	if ! [ -d "./_releases/$(RELEASE)/terraform-provider-solidserver_$(RELEASE)_darwin_amd64" ]; then mkdir "./_releases/$(RELEASE)/terraform-provider-solidserver_$(RELEASE)_darwin_amd64"; fi
 	if [ -d "./_releases/$(RELEASE)" ]; then rm -rf "./_releases/$(RELEASE)"; fi
-
-	mkdir -p "./_releases/$(RELEASE)/terraform-provider-solidserver_$(RELEASE)_linux_arm" 
-	mkdir -p "./_releases/$(RELEASE)/terraform-provider-solidserver_$(RELEASE)_linux_arm64"
-	mkdir -p "./_releases/$(RELEASE)/terraform-provider-solidserver_$(RELEASE)_linux_amd64"
-	mkdir -p "./_releases/$(RELEASE)/terraform-provider-solidserver_$(RELEASE)_freebsd_amd64"
-	mkdir -p "./_releases/$(RELEASE)/terraform-provider-solidserver_$(RELEASE)_windows_amd64"
-	mkdir -p "./_releases/$(RELEASE)/terraform-provider-solidserver_$(RELEASE)_darwin_arm64" 
-	mkdir -p "./_releases/$(RELEASE)/terraform-provider-solidserver_$(RELEASE)_darwin_amd64" 
-
+	
 	cp -r ./README.md ./LICENSE ./_releases/$(RELEASE)/terraform-provider-solidserver_$(RELEASE)_linux_arm/
 	cp -r ./README.md ./LICENSE ./_releases/$(RELEASE)/terraform-provider-solidserver_$(RELEASE)_linux_arm64/
 	cp -r ./README.md ./LICENSE ./_releases/$(RELEASE)/terraform-provider-solidserver_$(RELEASE)_linux_amd64/
