@@ -3,10 +3,11 @@ package solidserver
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
 	"log"
 	"net/url"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
 
 func resourceip6alias() *schema.Resource {
@@ -26,7 +27,7 @@ func resourceip6alias() *schema.Resource {
 			"address": {
 				Type:         schema.TypeString,
 				Description:  "The IPv6 address for which the alias will be associated to.",
-				ValidateFunc: validation.SingleIP(),
+				ValidateFunc: validation.IsIPAddress,
 				Required:     true,
 				ForceNew:     true,
 			},

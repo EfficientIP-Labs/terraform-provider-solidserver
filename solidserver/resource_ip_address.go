@@ -8,8 +8,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
 
 func resourceipaddress() *schema.Resource {
@@ -46,7 +46,7 @@ func resourceipaddress() *schema.Resource {
 			"request_ip": {
 				Type:         schema.TypeString,
 				Description:  "The optionally requested IP address.",
-				ValidateFunc: validation.SingleIP(),
+				ValidateFunc: validation.IsIPAddress,
 				Optional:     true,
 				ForceNew:     true,
 				Default:      "",
