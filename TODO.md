@@ -2,7 +2,15 @@
 
 - [X] Implement support for VLAN class parameters for version >= 7.2
 - [X] Implement support for DNS views
-- [ ] Upgrade SDK to V2 (https://www.terraform.io/plugin/sdkv2/guides/v2-upgrade-guide)
+- [-] Upgrade SDK to V2 (https://www.terraform.io/plugin/sdkv2/guides/v2-upgrade-guide)
+  - [X] Migrate to the new provider
+  - [ ] Migrate all Create/Reade/Delete Functions to their context aware equivalent (See IPSpace resource create for example)
+  - [ ] Migrate all SchemaValidateFunc to SchemaValidateDiagFunc - https://www.terraform.io/plugin/sdkv2/guides/v2-upgrade-guide#deprecation-of-helper-schema-schemavalidatefunc
+  - [ ] Remove all ExistsFunc that are now deprecated - https://www.terraform.io/plugin/sdkv2/guides/v2-upgrade-guide#deprecation-of-helper-schema-existsfunc
+  - [ ] Check all deprecated validation function - https://www.terraform.io/plugin/sdkv2/guides/v2-upgrade-guide#removal-of-deprecated-validation-functions
+  - [ ] Implement support for diagnostics
+  - [ ] Implement resource-Level and field-Level descriptions
+  - [ ] Leverage new validation from schema.Schema.Computed - https://www.terraform.io/plugin/sdkv2/guides/v2-upgrade-guide#stronger-validation-for-helper-schema-schema-computed-fields
 - [ ] Implement context https://www.terraform.io/plugin/sdkv2/guides/v2-upgrade-guide#more-support-for-context-context
 - [ ] Implement binary generation for https://www.terraform.io/registry/providers/os-arch
 - [ ] Implement a new releaser https://goreleaser.com/install/
