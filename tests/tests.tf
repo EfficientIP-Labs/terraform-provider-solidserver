@@ -385,6 +385,10 @@ resource "solidserver_dns_rr" "AFirstRecords" {
   type         = "A"
   value        = "127.0.0.1"
   count        = 16
+  class  = "CUSTOM_RR"
+  class_parameters = {
+    custom = "4267987"
+  }
 }
 
 resource "solidserver_dns_rr" "CnameFirstRecords" {
