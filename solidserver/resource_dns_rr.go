@@ -1,10 +1,12 @@
 package solidserver
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"log"
 	"net/url"
 	"strconv"
 	"strings"
@@ -12,13 +14,12 @@ import (
 
 func resourcednsrr() *schema.Resource {
 	return &schema.Resource{
-		Create: resourcednsrrCreate,
-		Read:   resourcednsrrRead,
-		Update: resourcednsrrUpdate,
-		Delete: resourcednsrrDelete,
-		Exists: resourcednsrrExists,
+		CreateContext: resourcednsrrCreate,
+		ReadContext:   resourcednsrrRead,
+		UpdateContext: resourcednsrrUpdate,
+		DeleteContext: resourcednsrrDelete,
 		Importer: &schema.ResourceImporter{
-			State: resourcednsrrImportState,
+			StateContext: resourcednsrrImportState,
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -69,6 +70,22 @@ func resourcednsrr() *schema.Resource {
 				Optional:    true,
 				Default:     3600,
 			},
+			"class": {
+				Type:        schema.TypeString,
+				Description: "The class associated to the DNS view.",
+				Optional:    true,
+				ForceNew:    false,
+				Default:     "",
+			},
+			"class_parameters": {
+				Type:        schema.TypeMap,
+				Description: "The class parameters associated to the view.",
+				Optional:    true,
+				ForceNew:    false,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 		},
 	}
 }
@@ -94,75 +111,7 @@ func resourcednsrrvalidatetype(v interface{}, _ string) ([]string, []error) {
 	}
 }
 
-func resourcednsrrExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	s := meta.(*SOLIDserver)
-
-	// Building parameters
-	parameters := url.Values{}
-
-	// Sending the read request
-	//parameters.Add("rr_id", d.Id())
-	//log.Printf("[DEBUG] Checking existence of RR (oid): %s\n", d.Id())
-	//resp, body, err := s.Request("get", "rest/dns_rr_info", &parameters)
-
-	// Attempt to not rely on the ID that may change due to DNS behavior
-	whereClause := "dns_name='" + d.Get("dnsserver").(string) + "' AND rr_full_name='" + d.Get("name").(string) + "' AND rr_type='" + strings.ToUpper(d.Get("type").(string))
-
-	// FIXME - Must convert IPv6 short to long
-	if strings.ToUpper(d.Get("type").(string)) == "AAAA" {
-		value := shortip6tolongip6(d.Get("value").(string))
-		log.Printf("[DEBUG] SOLIDServer - Using Expanded IPv6 format: %s\n", value)
-		whereClause += "' AND value1='" + value + "' "
-	} else {
-		whereClause += "' AND value1='" + d.Get("value").(string) + "' "
-	}
-
-	// Attempt to hande changing RR IDs
-	if len(d.Get("dnsview").(string)) != 0 {
-		whereClause += "AND dnsview_name='" + d.Get("dnsview").(string) + "' "
-	} else {
-		whereClause += "AND dnsview_name='#' "
-	}
-
-	// Add dnszone parameter if it is supplied
-	if len(d.Get("dnszone").(string)) != 0 {
-		whereClause += "AND dnszone_name='" + d.Get("dnszone").(string) + "' "
-	}
-
-	parameters.Add("WHERE", whereClause)
-	resp, body, err := s.Request("get", "rest/dns_rr_list", &parameters)
-
-	if err == nil {
-		var buf [](map[string]interface{})
-		json.Unmarshal([]byte(body), &buf)
-
-		// Checking the answer
-		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
-			if oid, oidExist := buf[0]["rr_id"].(string); oidExist {
-				d.SetId(oid)
-			}
-			return true, nil
-		}
-
-		if len(buf) > 0 {
-			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				// Log the error
-				log.Printf("[DEBUG] SOLIDServer - Unable to find RR (oid): %s (%s)\n", d.Id(), errMsg)
-			}
-		} else {
-			// Log the error
-			log.Printf("[DEBUG] SOLIDServer - Unable to find RR (oid): %s\n", d.Id())
-		}
-
-		// Unset local ID
-		d.SetId("")
-	}
-
-	// Reporting a failure
-	return false, err
-}
-
-func resourcednsrrCreate(d *schema.ResourceData, meta interface{}) error {
+func resourcednsrrCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -184,6 +133,13 @@ func resourcednsrrCreate(d *schema.ResourceData, meta interface{}) error {
 		parameters.Add("dnszone_name", strings.ToLower(d.Get("dnszone").(string)))
 	}
 
+	if s.Version < 800 {
+		tflog.Info(ctx, fmt.Sprintf("RR class parameters are not supported in SOLIDserver Version (%i)", s.Version))
+	} else {
+		parameters.Add("rr_class_name", d.Get("class").(string))
+		parameters.Add("rr_class_parameters", urlfromclassparams(d.Get("class_parameters")).Encode())
+	}
+
 	// Sending the creation request
 	resp, body, err := s.Request("post", "rest/dns_rr_add", &parameters)
 
@@ -194,7 +150,7 @@ func resourcednsrrCreate(d *schema.ResourceData, meta interface{}) error {
 		// Checking the answer
 		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
 			if oid, oidExist := buf[0]["ret_oid"].(string); oidExist {
-				log.Printf("[DEBUG] SOLIDServer - Created RR (oid): %s\n", oid)
+				tflog.Debug(ctx, fmt.Sprintf("Created RR (oid): %s\n", oid))
 				d.SetId(oid)
 				return nil
 			}
@@ -203,18 +159,18 @@ func resourcednsrrCreate(d *schema.ResourceData, meta interface{}) error {
 		// Reporting a failure
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				return fmt.Errorf("SOLIDServer - Unable to create RR: %s (%s)", d.Get("name").(string), errMsg)
+				return diag.Errorf("Unable to create RR: %s (%s)", d.Get("name").(string), errMsg)
 			}
 		}
 
-		return fmt.Errorf("SOLIDServer - Unable to create RR: %s\n", d.Get("name").(string))
+		return diag.Errorf("Unable to create RR: %s\n", d.Get("name").(string))
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourcednsrrUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourcednsrrUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -237,6 +193,13 @@ func resourcednsrrUpdate(d *schema.ResourceData, meta interface{}) error {
 		parameters.Add("dnszone_name", strings.ToLower(d.Get("dnszone").(string)))
 	}
 
+	if s.Version < 800 {
+		tflog.Info(ctx, fmt.Sprintf("RR class parameters are not supported in SOLIDserver Version (%i)", s.Version))
+	} else {
+		parameters.Add("rr_class_name", d.Get("class").(string))
+		parameters.Add("rr_class_parameters", urlfromclassparams(d.Get("class_parameters")).Encode())
+	}
+
 	// Sending the update request
 	resp, body, err := s.Request("put", "rest/dns_rr_add", &parameters)
 
@@ -247,7 +210,7 @@ func resourcednsrrUpdate(d *schema.ResourceData, meta interface{}) error {
 		// Checking the answer
 		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
 			if oid, oidExist := buf[0]["ret_oid"].(string); oidExist {
-				log.Printf("[DEBUG] SOLIDServer - Updated RR (oid): %s\n", oid)
+				tflog.Debug(ctx, fmt.Sprintf("Updated RR (oid): %s\n", oid))
 				d.SetId(oid)
 				return nil
 			}
@@ -256,18 +219,18 @@ func resourcednsrrUpdate(d *schema.ResourceData, meta interface{}) error {
 		// Reporting a failure
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				return fmt.Errorf("SOLIDServer - Unable to update RR: %s (%s)", d.Get("name").(string), errMsg)
+				return diag.Errorf("Unable to update RR: %s (%s)", d.Get("name").(string), errMsg)
 			}
 		}
 
-		return fmt.Errorf("SOLIDServer - Unable to update RR: %s\n", d.Get("name").(string))
+		return diag.Errorf("Unable to update RR: %s\n", d.Get("name").(string))
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourcednsrrDelete(d *schema.ResourceData, meta interface{}) error {
+func resourcednsrrDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -291,15 +254,15 @@ func resourcednsrrDelete(d *schema.ResourceData, meta interface{}) error {
 			// Reporting a failure
 			if len(buf) > 0 {
 				if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-					return fmt.Errorf("SOLIDServer - Unable to delete RR: %s (%s)", d.Get("name").(string), errMsg)
+					return diag.Errorf("Unable to delete RR: %s (%s)", d.Get("name").(string), errMsg)
 				}
 			}
 
-			return fmt.Errorf("SOLIDServer - Unable to delete RR: %s", d.Get("name").(string))
+			return diag.Errorf("Unable to delete RR: %s", d.Get("name").(string))
 		}
 
 		// Log deletion
-		log.Printf("[DEBUG] SOLIDServer - Deleted RR (oid): %s\n", d.Id())
+		tflog.Debug(ctx, fmt.Sprintf("Deleted RR (oid): %s\n", d.Id()))
 
 		// Unset local ID
 		d.SetId("")
@@ -309,26 +272,22 @@ func resourcednsrrDelete(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourcednsrrRead(d *schema.ResourceData, meta interface{}) error {
+func resourcednsrrRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
 	parameters := url.Values{}
 
 	// Sending the read request
-	//parameters.Add("rr_id", d.Id())
-	//resp, body, err := s.Request("get", "rest/dns_rr_info", &parameters)
-
-	// Attempt to not rely on the ID that may change due to DNS behavior
+	// We do not rely on the ID that may change due to DNS behavior
 	whereClause := "dns_name='" + d.Get("dnsserver").(string) + "' AND rr_full_name='" + d.Get("name").(string) + "' AND rr_type='" + strings.ToUpper(d.Get("type").(string))
 
-	// FIXME - Must convert IPv6 short to long
 	if strings.ToUpper(d.Get("type").(string)) == "AAAA" {
 		value := shortip6tolongip6(d.Get("value").(string))
-		log.Printf("[DEBUG] SOLIDServer - Using Expanded IPv6 format: %s\n", value)
+		tflog.Debug(ctx, fmt.Sprintf("Using Expanded IPv6 format: %s\n", value))
 		whereClause += "' AND value1='" + value + "' "
 	} else {
 		whereClause += "' AND value1='" + d.Get("value").(string) + "' "
@@ -377,30 +336,50 @@ func resourcednsrrRead(d *schema.ResourceData, meta interface{}) error {
 				d.Set("dnsview", buf[0]["dnsview_name"].(string))
 			}
 
+			if s.Version < 800 {
+				tflog.Info(ctx, fmt.Sprintf("RR class parameters are not supported in SOLIDserver Version (%i)", s.Version))
+			} else {
+				d.Set("class", buf[0]["rr_class_name"].(string))
+
+				// Updating local class_parameters
+				currentClassParameters := d.Get("class_parameters").(map[string]interface{})
+				retrievedClassParameters, _ := url.ParseQuery(buf[0]["rr_class_parameters"].(string))
+				computedClassParameters := map[string]string{}
+
+				for ck := range currentClassParameters {
+					if rv, rvExist := retrievedClassParameters[ck]; rvExist {
+						computedClassParameters[ck] = rv[0]
+					} else {
+						computedClassParameters[ck] = ""
+					}
+				}
+				d.Set("class_parameters", computedClassParameters)
+			}
+
 			return nil
 		}
 
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
 				// Log the error
-				log.Printf("[DEBUG] SOLIDServer - Unable to find RR: %s (%s)\n", d.Get("name"), errMsg)
+				tflog.Debug(ctx, fmt.Sprintf("Unable to find RR: %s (%s)\n", d.Get("name"), errMsg))
 			}
 		} else {
 			// Log the error
-			log.Printf("[DEBUG] SOLIDServer - Unable to find RR (oid): %s\n", d.Id())
+			tflog.Debug(ctx, fmt.Sprintf("Unable to find RR (oid): %s\n", d.Id()))
 		}
 
 		// Do not unset the local ID to avoid inconsistency
 
 		// Reporting a failure
-		return fmt.Errorf("SOLIDServer - Unable to find RR: %s\n", d.Get("name").(string))
+		return diag.Errorf("SOLIDServer - Unable to find RR: %s\n", d.Get("name").(string))
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourcednsrrImportState(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+func resourcednsrrImportState(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -434,21 +413,41 @@ func resourcednsrrImportState(d *schema.ResourceData, meta interface{}) ([]*sche
 				d.Set("dnsview", buf[0]["dnsview_name"].(string))
 			}
 
+			if s.Version < 800 {
+				tflog.Info(ctx, fmt.Sprintf("RR class parameters are not supported in SOLIDserver Version (%i)", s.Version))
+			} else {
+				d.Set("class", buf[0]["rr_class_name"].(string))
+
+				// Updating local class_parameters
+				currentClassParameters := d.Get("class_parameters").(map[string]interface{})
+				retrievedClassParameters, _ := url.ParseQuery(buf[0]["rr_class_parameters"].(string))
+				computedClassParameters := map[string]string{}
+
+				for ck := range currentClassParameters {
+					if rv, rvExist := retrievedClassParameters[ck]; rvExist {
+						computedClassParameters[ck] = rv[0]
+					} else {
+						computedClassParameters[ck] = ""
+					}
+				}
+				d.Set("class_parameters", computedClassParameters)
+			}
+
 			return []*schema.ResourceData{d}, nil
 		}
 
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
 				// Log the error
-				log.Printf("[DEBUG] SOLIDServer - Unable to import RR (oid): %s (%s)\n", d.Id(), errMsg)
+				tflog.Debug(ctx, fmt.Sprintf("Unable to import RR (oid): %s (%s)\n", d.Id(), errMsg))
 			}
 		} else {
 			// Log the error
-			log.Printf("[DEBUG] SOLIDServer - Unable to find and import RR (oid): %s\n", d.Id())
+			tflog.Debug(ctx, fmt.Sprintf("Unable to find and import RR (oid): %s\n", d.Id()))
 		}
 
 		// Reporting a failure
-		return nil, fmt.Errorf("SOLIDServer - Unable to find and import RR (oid): %s\n", d.Id())
+		return nil, fmt.Errorf("Unable to find and import RR (oid): %s\n", d.Id())
 	}
 
 	// Reporting a failure

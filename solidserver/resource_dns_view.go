@@ -569,6 +569,7 @@ func resourcednsviewRead(d *schema.ResourceData, meta interface{}) error {
 				}
 				d.Set("match_to", matchTos)
 			}
+
 			d.Set("class", buf[0]["dnsview_class_name"].(string))
 
 			// Updating local class_parameters

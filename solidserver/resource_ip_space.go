@@ -1,22 +1,23 @@
 package solidserver
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"log"
 	"net/url"
 )
 
 func resourceipspace() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceipspaceCreate,
-		Read:   resourceipspaceRead,
-		Update: resourceipspaceUpdate,
-		Delete: resourceipspaceDelete,
-		Exists: resourceipspaceExists,
+		CreateContext: resourceipspaceCreate,
+		ReadContext:   resourceipspaceRead,
+		UpdateContext: resourceipspaceUpdate,
+		DeleteContext: resourceipspaceDelete,
 		Importer: &schema.ResourceImporter{
-			State: resourceipspaceImportState,
+			StateContext: resourceipspaceImportState,
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -46,44 +47,7 @@ func resourceipspace() *schema.Resource {
 	}
 }
 
-func resourceipspaceExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	s := meta.(*SOLIDserver)
-
-	// Building parameters
-	parameters := url.Values{}
-	parameters.Add("site_id", d.Id())
-
-	log.Printf("[DEBUG] Checking existence of IP space (oid): %s\n", d.Id())
-
-	// Sending read request
-	resp, body, err := s.Request("get", "rest/ip_site_info", &parameters)
-
-	if err == nil {
-		var buf [](map[string]interface{})
-		json.Unmarshal([]byte(body), &buf)
-
-		// Checking answer
-		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
-			return true, nil
-		}
-
-		if len(buf) > 0 {
-			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				log.Printf("[DEBUG] SOLIDServer - Unable to find IP space (oid): %s (%s)\n", d.Id(), errMsg)
-			}
-		} else {
-			log.Printf("[DEBUG] SOLIDServer - Unable to find IP space (oid): %s\n", d.Id())
-		}
-
-		// Unset local ID
-		d.SetId("")
-	}
-
-	// Reporting a failure
-	return false, err
-}
-
-func resourceipspaceCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceipspaceCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -103,7 +67,8 @@ func resourceipspaceCreate(d *schema.ResourceData, meta interface{}) error {
 		// Checking the answer
 		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
 			if oid, oidExist := buf[0]["ret_oid"].(string); oidExist {
-				log.Printf("[DEBUG] SOLIDServer - Created IP space (oid): %s\n", oid)
+				//MIGRATION SDKV2 - tflog.Debug("Created IP space (oid): %s\n", oid)
+				tflog.Debug(ctx, fmt.Sprintf("Created IP space (oid): %s\n", oid))
 				d.SetId(oid)
 				return nil
 			}
@@ -112,18 +77,18 @@ func resourceipspaceCreate(d *schema.ResourceData, meta interface{}) error {
 		// Reporting a failure
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				return fmt.Errorf("SOLIDServer - Unable to create IP space: %s (%s)", d.Get("name").(string), errMsg)
+				return diag.Errorf("Unable to create IP space: %s (%s)", d.Get("name").(string), errMsg)
 			}
 		}
 
-		return fmt.Errorf("SOLIDServer - Unable to create IP space: %s\n", d.Get("name").(string))
+		return diag.Errorf("Unable to create IP space: %s\n", d.Get("name").(string))
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourceipspaceUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceipspaceUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -144,7 +109,7 @@ func resourceipspaceUpdate(d *schema.ResourceData, meta interface{}) error {
 		// Checking the answer
 		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
 			if oid, oidExist := buf[0]["ret_oid"].(string); oidExist {
-				log.Printf("[DEBUG] SOLIDServer - Updated IP space (oid): %s\n", oid)
+				tflog.Debug("Updated IP space (oid): %s\n", oid)
 				d.SetId(oid)
 				return nil
 			}
@@ -153,18 +118,18 @@ func resourceipspaceUpdate(d *schema.ResourceData, meta interface{}) error {
 		// Reporting a failure
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				return fmt.Errorf("SOLIDServer - Unable to update IP space: %s (%s)", d.Get("name").(string), errMsg)
+				return diag.Errorf("Unable to update IP space: %s (%s)", d.Get("name").(string), errMsg)
 			}
 		}
 
-		return fmt.Errorf("SOLIDServer - Unable to update IP space: %s\n", d.Get("name").(string))
+		return diag.Errorf("Unable to update IP space: %s\n", d.Get("name").(string))
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourceipspaceDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceipspaceDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -183,15 +148,15 @@ func resourceipspaceDelete(d *schema.ResourceData, meta interface{}) error {
 			// Reporting a failure
 			if len(buf) > 0 {
 				if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-					return fmt.Errorf("SOLIDServer - Unable to delete IP space: %s (%s)", d.Get("name").(string), errMsg)
+					return diag.Errorf("Unable to delete IP space: %s (%s)", d.Get("name").(string), errMsg)
 				}
 			}
 
-			return fmt.Errorf("SOLIDServer - Unable to delete IP space: %s", d.Get("name").(string))
+			return diag.Errorf("Unable to delete IP space: %s", d.Get("name").(string))
 		}
 
 		// Log deletion
-		log.Printf("[DEBUG] SOLIDServer - Deleted IP space (oid): %s\n", d.Id())
+		tflog.Debug("Deleted IP space (oid): %s\n", d.Id())
 
 		// Unset local ID
 		d.SetId("")
@@ -201,10 +166,10 @@ func resourceipspaceDelete(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourceipspaceRead(d *schema.ResourceData, meta interface{}) error {
+func resourceipspaceRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -244,24 +209,24 @@ func resourceipspaceRead(d *schema.ResourceData, meta interface{}) error {
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
 				// Log the error
-				log.Printf("[DEBUG] SOLIDServer - Unable to find IP space: %s (%s)\n", d.Get("name"), errMsg)
+				tflog.Debug("Unable to find IP space: %s (%s)\n", d.Get("name"), errMsg)
 			}
 		} else {
 			// Log the error
-			log.Printf("[DEBUG] SOLIDServer - Unable to find IP space (oid): %s\n", d.Id())
+			tflog.Debug("Unable to find IP space (oid): %s\n", d.Id())
 		}
 
 		// Do not unset the local ID to avoid inconsistency
 
 		// Reporting a failure
-		return fmt.Errorf("SOLIDServer - Unable to find IP space: %s\n", d.Get("name").(string))
+		return diag.Errorf("Unable to find IP space: %s\n", d.Get("name").(string))
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourceipspaceImportState(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+func resourceipspaceImportState(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -300,14 +265,14 @@ func resourceipspaceImportState(d *schema.ResourceData, meta interface{}) ([]*sc
 
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				log.Printf("[DEBUG] SOLIDServer - Unable to import IP space(oid): %s (%s)\n", d.Id(), errMsg)
+				tflog.Debug("Unable to import IP space(oid): %s (%s)\n", d.Id(), errMsg)
 			}
 		} else {
-			log.Printf("[DEBUG] SOLIDServer - Unable to find and import IP space (oid): %s\n", d.Id())
+			tflog.Debug("Unable to find and import IP space (oid): %s\n", d.Id())
 		}
 
 		// Reporting a failure
-		return nil, fmt.Errorf("SOLIDServer - Unable to find and import IP space (oid): %s\n", d.Id())
+		return nil, fmt.Errorf("Unable to find and import IP space (oid): %s\n", d.Id())
 	}
 
 	// Reporting a failure
