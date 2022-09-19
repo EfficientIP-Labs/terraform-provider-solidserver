@@ -1,29 +1,29 @@
 package solidserver
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"log"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"net/url"
 	"regexp"
 	"strings"
 	"time"
-
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
 
 func resourcednsserver() *schema.Resource {
 	return &schema.Resource{
-		Create: resourcednsserverCreate,
-		Read:   resourcednsserverRead,
-		Update: resourcednsserverUpdate,
-		Delete: resourcednsserverDelete,
-		Exists: resourcednsserverExists,
+		CreateContext: resourcednsserverCreate,
+		ReadContext:   resourcednsserverRead,
+		UpdateContext: resourcednsserverUpdate,
+		DeleteContext: resourcednsserverDelete,
 		Importer: &schema.ResourceImporter{
-			State: resourcednsserverImportState,
+			StateContext: resourcednsserverImportState,
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -162,44 +162,7 @@ func resourcednsserver() *schema.Resource {
 	}
 }
 
-func resourcednsserverExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	s := meta.(*SOLIDserver)
-
-	// Building parameters
-	parameters := url.Values{}
-	parameters.Add("dns_id", d.Id())
-
-	log.Printf("[DEBUG] Checking existence of DNS server (oid): %s\n", d.Id())
-
-	// Sending read request
-	resp, body, err := s.Request("get", "rest/dns_server_info", &parameters)
-
-	if err == nil {
-		var buf [](map[string]interface{})
-		json.Unmarshal([]byte(body), &buf)
-
-		// Checking answer
-		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
-			return true, nil
-		}
-
-		if len(buf) > 0 {
-			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				log.Printf("[DEBUG] SOLIDServer - Unable to find DNS server (oid): %s (%s)\n", d.Id(), errMsg)
-			}
-		} else {
-			log.Printf("[DEBUG] SOLIDServer - Unable to find DNS server (oid): %s\n", d.Id())
-		}
-
-		// Unset local ID
-		d.SetId("")
-	}
-
-	// Reporting a failure
-	return false, err
-}
-
-func resourcednsserverCreate(d *schema.ResourceData, meta interface{}) error {
+func resourcednsserverCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -232,7 +195,7 @@ func resourcednsserverCreate(d *schema.ResourceData, meta interface{}) error {
 	if d.Get("forward").(string) == "none" {
 		parameters.Add("dns_forward", "")
 		if fwdList != "" {
-			return fmt.Errorf("SOLIDServer - Error creating DNS server: %s (Forward mode set to 'none' but forwarders list is not empty).", strings.ToLower(d.Get("name").(string)))
+			return diag.Errorf("Error creating DNS server: %s (Forward mode set to 'none' but forwarders list is not empty).", strings.ToLower(d.Get("name").(string)))
 		}
 	} else {
 		parameters.Add("dns_forward", strings.ToLower(d.Get("forward").(string)))
@@ -245,7 +208,7 @@ func resourcednsserverCreate(d *schema.ResourceData, meta interface{}) error {
 	allowTransfers := ""
 	for _, allowTransfer := range toStringArray(d.Get("allow_transfer").([]interface{})) {
 		if match, _ := regexp.MatchString(regexpNetworkAcl, allowTransfer); match == false {
-			return fmt.Errorf("SOLIDServer - Only network prefixes are supported for DNS server's allow_transfer parameter")
+			return diag.Errorf("Only network prefixes are supported for DNS server's allow_transfer parameter")
 		}
 		allowTransfers += allowTransfer + ";"
 	}
@@ -255,7 +218,7 @@ func resourcednsserverCreate(d *schema.ResourceData, meta interface{}) error {
 	allowQueries := ""
 	for _, allowQuery := range toStringArray(d.Get("allow_query").([]interface{})) {
 		if match, _ := regexp.MatchString(regexpNetworkAcl, allowQuery); match == false {
-			return fmt.Errorf("SOLIDServer - Only network prefixes are supported for DNS server's allow_query parameter")
+			return diag.Errorf("Only network prefixes are supported for DNS server's allow_query parameter")
 		}
 		allowQueries += allowQuery + ";"
 	}
@@ -265,7 +228,7 @@ func resourcednsserverCreate(d *schema.ResourceData, meta interface{}) error {
 	allowRecursions := ""
 	for _, allowRecursion := range toStringArray(d.Get("allow_recursion").([]interface{})) {
 		if match, _ := regexp.MatchString(regexpNetworkAcl, allowRecursion); match == false {
-			return fmt.Errorf("SOLIDServer - Only network prefixes are supported for DNS server's allow_recursion parameter")
+			return diag.Errorf("Only network prefixes are supported for DNS server's allow_recursion parameter")
 		}
 		allowRecursions += allowRecursion + ";"
 	}
@@ -284,7 +247,7 @@ func resourcednsserverCreate(d *schema.ResourceData, meta interface{}) error {
 		// Checking the answer
 		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
 			if oid, oidExist := buf[0]["ret_oid"].(string); oidExist {
-				log.Printf("[DEBUG] SOLIDServer - Created DNS server (oid): %s\n", oid)
+				tflog.Debug(ctx, fmt.Sprintf("Created DNS server (oid): %s\n", oid))
 				d.SetId(oid)
 
 				loginHash := sha256.Sum256([]byte(d.Get("login").(string)))
@@ -313,18 +276,18 @@ func resourcednsserverCreate(d *schema.ResourceData, meta interface{}) error {
 		// Reporting a failure
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				return fmt.Errorf("SOLIDServer - Unable to create DNS server: %s (%s)", strings.ToLower(d.Get("name").(string)), errMsg)
+				return diag.Errorf("Unable to create DNS server: %s (%s)", strings.ToLower(d.Get("name").(string)), errMsg)
 			}
 		}
 
-		return fmt.Errorf("SOLIDServer - Unable to create DNS server: %s\n", strings.ToLower(d.Get("name").(string)))
+		return diag.Errorf("Unable to create DNS server: %s\n", strings.ToLower(d.Get("name").(string)))
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourcednsserverUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourcednsserverUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -354,7 +317,7 @@ func resourcednsserverUpdate(d *schema.ResourceData, meta interface{}) error {
 	if d.Get("forward").(string) == "none" {
 		parameters.Add("dns_forward", "")
 		if fwdList != "" {
-			return fmt.Errorf("SOLIDServer - Error creating DNS server: %s (Forward mode set to 'none' but forwarders list is not empty).", strings.ToLower(d.Get("name").(string)))
+			return diag.Errorf("Error creating DNS server: %s (Forward mode set to 'none' but forwarders list is not empty).", strings.ToLower(d.Get("name").(string)))
 		}
 	} else {
 		parameters.Add("dns_forward", strings.ToLower(d.Get("forward").(string)))
@@ -367,7 +330,7 @@ func resourcednsserverUpdate(d *schema.ResourceData, meta interface{}) error {
 	allowTransfers := ""
 	for _, allowTransfer := range toStringArray(d.Get("allow_transfer").([]interface{})) {
 		if match, _ := regexp.MatchString(regexpNetworkAcl, allowTransfer); match == false {
-			return fmt.Errorf("SOLIDServer - Only network prefixes are supported for DNS server's allow_transfer parameter")
+			return diag.Errorf("Only network prefixes are supported for DNS server's allow_transfer parameter")
 		}
 		allowTransfers += allowTransfer + ";"
 	}
@@ -377,7 +340,7 @@ func resourcednsserverUpdate(d *schema.ResourceData, meta interface{}) error {
 	allowQueries := ""
 	for _, allowQuery := range toStringArray(d.Get("allow_query").([]interface{})) {
 		if match, _ := regexp.MatchString(regexpNetworkAcl, allowQuery); match == false {
-			return fmt.Errorf("SOLIDServer - Only network prefixes are supported for DNS server's allow_query parameter")
+			return diag.Errorf("Only network prefixes are supported for DNS server's allow_query parameter")
 		}
 		allowQueries += allowQuery + ";"
 	}
@@ -387,7 +350,7 @@ func resourcednsserverUpdate(d *schema.ResourceData, meta interface{}) error {
 	allowRecursions := ""
 	for _, allowRecursion := range toStringArray(d.Get("allow_recursion").([]interface{})) {
 		if match, _ := regexp.MatchString(regexpNetworkAcl, allowRecursion); match == false {
-			return fmt.Errorf("SOLIDServer - Only network prefixes are supported for DNS server's allow_recursion parameter")
+			return diag.Errorf("Only network prefixes are supported for DNS server's allow_recursion parameter")
 		}
 		allowRecursions += allowRecursion + ";"
 	}
@@ -406,7 +369,7 @@ func resourcednsserverUpdate(d *schema.ResourceData, meta interface{}) error {
 		// Checking the answer
 		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
 			if oid, oidExist := buf[0]["ret_oid"].(string); oidExist {
-				log.Printf("[DEBUG] SOLIDServer - Updated DNS server (oid): %s\n", oid)
+				tflog.Debug(ctx, fmt.Sprintf("Updated DNS server (oid): %s\n", oid))
 				d.SetId(oid)
 				return nil
 			}
@@ -415,18 +378,18 @@ func resourcednsserverUpdate(d *schema.ResourceData, meta interface{}) error {
 		// Reporting a failure
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				return fmt.Errorf("SOLIDServer - Unable to update DNS server: %s (%s)", strings.ToLower(d.Get("name").(string)), errMsg)
+				return diag.Errorf("Unable to update DNS server: %s (%s)", strings.ToLower(d.Get("name").(string)), errMsg)
 			}
 		}
 
-		return fmt.Errorf("SOLIDServer - Unable to update DNS server: %s\n", strings.ToLower(d.Get("name").(string)))
+		return diag.Errorf("Unable to update DNS server: %s\n", strings.ToLower(d.Get("name").(string)))
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourcednsserverDelete(d *schema.ResourceData, meta interface{}) error {
+func resourcednsserverDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	for i := 0; i < 3; i++ {
@@ -454,7 +417,7 @@ func resourcednsserverDelete(d *schema.ResourceData, meta interface{}) error {
 
 		// Reporting a failure
 		if attempts >= 3 {
-			return fmt.Errorf("SOLIDServer - Unable to delete DNS server: Too many unsuccessful deletion attempts (Pending operations)")
+			return diag.Errorf("Unable to delete DNS server: Too many unsuccessful deletion attempts (Pending operations)")
 		}
 
 		// Sending the deletion request
@@ -467,7 +430,7 @@ func resourcednsserverDelete(d *schema.ResourceData, meta interface{}) error {
 			// Checking the answer
 			if resp.StatusCode == 200 || resp.StatusCode == 204 {
 				// Log deletion
-				log.Printf("[DEBUG] SOLIDServer - Deleted DNS server (oid): %s\n", d.Id())
+				tflog.Debug(ctx, fmt.Sprintf("Deleted DNS server (oid): %s\n", d.Id()))
 
 				// Unset local ID
 				d.SetId("")
@@ -478,24 +441,24 @@ func resourcednsserverDelete(d *schema.ResourceData, meta interface{}) error {
 				// Logging a failure
 				if len(buf) > 0 {
 					if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-						log.Printf("[DEBUG] SOLIDServer - Unable to delete DNS server: %s (%s)", strings.ToLower(d.Get("name").(string)), errMsg)
+						tflog.Debug(ctx, fmt.Sprintf("Unable to delete DNS server: %s (%s)", strings.ToLower(d.Get("name").(string)), errMsg))
 					}
 				} else {
-					log.Printf("[DEBUG] SOLIDServer - Unable to delete DNS server: %s", strings.ToLower(d.Get("name").(string)))
+					tflog.Debug(ctx, fmt.Sprintf("Unable to delete DNS server: %s", strings.ToLower(d.Get("name").(string))))
 				}
 				time.Sleep(time.Duration(8 * time.Second))
 			}
 		} else {
 			// Reporting a failure
-			return err
+			return diag.FromErr(err)
 		}
 	}
 
 	// Reporting a failure
-	return fmt.Errorf("SOLIDServer - Unable to delete DNS server: Too many unsuccessful deletion attempts")
+	return diag.Errorf("Unable to delete DNS server: Too many unsuccessful deletion attempts")
 }
 
-func resourcednsserverRead(d *schema.ResourceData, meta interface{}) error {
+func resourcednsserverRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -592,24 +555,24 @@ func resourcednsserverRead(d *schema.ResourceData, meta interface{}) error {
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
 				// Log the error
-				log.Printf("[DEBUG] SOLIDServer - Unable to find DNS server: %s (%s)\n", strings.ToLower(d.Get("name").(string)), errMsg)
+				tflog.Debug(ctx, fmt.Sprintf("Unable to find DNS server: %s (%s)\n", strings.ToLower(d.Get("name").(string)), errMsg))
 			}
 		} else {
 			// Log the error
-			log.Printf("[DEBUG] SOLIDServer - Unable to find DNS server (oid): %s\n", d.Id())
+			tflog.Debug(ctx, fmt.Sprintf("Unable to find DNS server (oid): %s\n", d.Id()))
 		}
 
 		// Do not unset the local ID to avoid inconsistency
 
 		// Reporting a failure
-		return fmt.Errorf("SOLIDServer - Unable to find DNS server: %s\n", strings.ToLower(d.Get("name").(string)))
+		return diag.Errorf("Unable to find DNS server: %s\n", strings.ToLower(d.Get("name").(string)))
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourcednsserverImportState(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+func resourcednsserverImportState(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -704,10 +667,10 @@ func resourcednsserverImportState(d *schema.ResourceData, meta interface{}) ([]*
 
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				log.Printf("[DEBUG] SOLIDServer - Unable to import DNS server (oid): %s (%s)\n", d.Id(), errMsg)
+				tflog.Debug(ctx, fmt.Sprintf("Unable to import DNS server (oid): %s (%s)\n", d.Id(), errMsg))
 			}
 		} else {
-			log.Printf("[DEBUG] SOLIDServer - Unable to find and import DNS server (oid): %s\n", d.Id())
+			tflog.Debug(ctx, fmt.Sprintf("Unable to find and import DNS server (oid): %s\n", d.Id()))
 		}
 
 		// Reporting a failure

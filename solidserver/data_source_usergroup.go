@@ -1,16 +1,18 @@
 package solidserver
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"log"
 	"net/url"
 )
 
 func dataSourceusergroup() *schema.Resource {
 	return &schema.Resource{
-		Read: dataSourceusergroupRead,
+		ReadContext: dataSourceusergroupRead,
 
 		Schema: map[string]*schema.Schema{
 			"name": {
@@ -22,7 +24,7 @@ func dataSourceusergroup() *schema.Resource {
 	}
 }
 
-func dataSourceusergroupRead(d *schema.ResourceData, meta interface{}) error {
+func dataSourceusergroupRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 	d.SetId("")
 
@@ -34,7 +36,7 @@ func dataSourceusergroupRead(d *schema.ResourceData, meta interface{}) error {
 	resp, body, err := s.Request("get", "rest/group_admin_list", &parameters)
 
 	if err != nil {
-		return fmt.Errorf("SOLIDServer - Error on group %s %s\n", d.Get("name").(string), err)
+		return diag.Errorf("Error on group %s %s\n", d.Get("name").(string), err)
 	}
 
 	var buf [](map[string]interface{})
@@ -50,13 +52,13 @@ func dataSourceusergroupRead(d *schema.ResourceData, meta interface{}) error {
 	if len(buf) > 0 {
 		if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
 			// Log the error
-			log.Printf("[DEBUG] SOLIDServer - Unable to find group: %s (%s)\n", d.Get("name").(string), errMsg)
+			tflog.Debug(ctx, fmt.Sprintf("Unable to find group: %s (%s)\n", d.Get("name").(string), errMsg))
 		}
 	} else {
 		// Log the error
-		return fmt.Errorf("SOLIDServer - Unable to find group: %s\n", d.Get("name").(string))
+		return diag.Errorf("Unable to find group: %s\n", d.Get("name").(string))
 	}
 
 	// Reporting a failure
-	return fmt.Errorf("SOLIDServer - Error retreiving group : %s\n", d.Get("name").(string))
+	return diag.Errorf("Error retreiving group : %s\n", d.Get("name").(string))
 }

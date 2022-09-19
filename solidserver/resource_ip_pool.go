@@ -1,26 +1,26 @@
 package solidserver
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"net/url"
 	"strconv"
 	"strings"
-
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
 
 func resourceippool() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceippoolCreate,
-		Read:   resourceippoolRead,
-		Update: resourceippoolUpdate,
-		Delete: resourceippoolDelete,
-		Exists: resourceippoolExists,
+		CreateContext: resourceippoolCreate,
+		ReadContext:   resourceippoolRead,
+		UpdateContext: resourceippoolUpdate,
+		DeleteContext: resourceippoolDelete,
 		Importer: &schema.ResourceImporter{
-			State: resourceippoolImportState,
+			StateContext: resourceippoolImportState,
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -92,59 +92,21 @@ func resourceippool() *schema.Resource {
 	}
 }
 
-func resourceippoolExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	s := meta.(*SOLIDserver)
-
-	// Building parameters
-	parameters := url.Values{}
-	parameters.Add("pool_id", d.Id())
-
-	log.Printf("[DEBUG] Checking existence of IP pool (oid): %s\n", d.Id())
-
-	// Sending the read request
-	resp, body, err := s.Request("get", "rest/ip_pool_info", &parameters)
-
-	if err == nil {
-		var buf [](map[string]interface{})
-		json.Unmarshal([]byte(body), &buf)
-
-		// Checking the answer
-		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
-			return true, nil
-		}
-
-		if len(buf) > 0 {
-			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				// Log the error
-				log.Printf("[DEBUG] SOLIDServer - Unable to find IP pool (oid): %s (%s)\n", d.Id(), errMsg)
-			}
-		} else {
-			// Log the error
-			log.Printf("[DEBUG] SOLIDServer - Unable to find IP pool (oid): %s\n", d.Id())
-		}
-
-		// Unset local ID
-		d.SetId("")
-	}
-
-	return false, err
-}
-
-func resourceippoolCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceippoolCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Gather required ID(s) from provided information
 	siteID, siteErr := ipsiteidbyname(d.Get("space").(string), meta)
 	if siteErr != nil {
 		// Reporting a failure
-		return siteErr
+		return diag.FromErr(siteErr)
 	}
 
 	// Gather required ID(s) from provided subnet information
 	subnetInfo, subnetErr := ipsubnetinfobyname(siteID, d.Get("subnet").(string), true, meta)
 	if subnetErr != nil {
 		// Reporting a failure
-		return subnetErr
+		return diag.FromErr(subnetErr)
 	}
 
 	// Building parameters
@@ -184,7 +146,7 @@ func resourceippoolCreate(d *schema.ResourceData, meta interface{}) error {
 		// Checking the answer
 		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
 			if oid, oidExist := buf[0]["ret_oid"].(string); oidExist {
-				log.Printf("[DEBUG] SOLIDServer - Created IP pool (oid): %s\n", oid)
+				tflog.Debug(ctx, fmt.Sprintf("Created IP pool (oid): %s\n", oid))
 				d.SetId(oid)
 
 				d.Set("prefix", subnetInfo["start_addr"].(string)+"/"+strconv.Itoa(subnetInfo["prefix_length"].(int)))
@@ -197,18 +159,18 @@ func resourceippoolCreate(d *schema.ResourceData, meta interface{}) error {
 		// Reporting a failure
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				return fmt.Errorf("SOLIDServer - Unable to create IP pool: %s (%s)", d.Get("name").(string), errMsg)
+				return diag.Errorf("Unable to create IP pool: %s (%s)", d.Get("name").(string), errMsg)
 			}
 		}
 
-		return fmt.Errorf("SOLIDServer - Unable to create IP pool: %s\n", d.Get("name").(string))
+		return diag.Errorf("Unable to create IP pool: %s\n", d.Get("name").(string))
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourceippoolUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceippoolUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -246,7 +208,7 @@ func resourceippoolUpdate(d *schema.ResourceData, meta interface{}) error {
 		// Checking the answer
 		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
 			if oid, oidExist := buf[0]["ret_oid"].(string); oidExist {
-				log.Printf("[DEBUG] SOLIDServer - Updated IP pool (oid): %s\n", oid)
+				tflog.Debug(ctx, fmt.Sprintf("Updated IP pool (oid): %s\n", oid))
 				d.SetId(oid)
 				return nil
 			}
@@ -255,18 +217,18 @@ func resourceippoolUpdate(d *schema.ResourceData, meta interface{}) error {
 		// Reporting a failure
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				return fmt.Errorf("SOLIDServer - Unable to update IP pool: %s (%s)", d.Get("name").(string), errMsg)
+				return diag.Errorf("Unable to update IP pool: %s (%s)", d.Get("name").(string), errMsg)
 			}
 		}
 
-		return fmt.Errorf("SOLIDServer - Unable to update IP pool: %s\n", d.Get("name").(string))
+		return diag.Errorf("Unable to update IP pool: %s\n", d.Get("name").(string))
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourceippoolDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceippoolDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -285,15 +247,15 @@ func resourceippoolDelete(d *schema.ResourceData, meta interface{}) error {
 			// Reporting a failure
 			if len(buf) > 0 {
 				if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-					return fmt.Errorf("SOLIDServer - Unable to delete IP pool: %s (%s)", d.Get("name").(string), errMsg)
+					return diag.Errorf("Unable to delete IP pool: %s (%s)", d.Get("name").(string), errMsg)
 				}
 			}
 
-			return fmt.Errorf("SOLIDServer - Unable to delete IP pool: %s", d.Get("name").(string))
+			return diag.Errorf("Unable to delete IP pool: %s", d.Get("name").(string))
 		}
 
 		// Log deletion
-		log.Printf("[DEBUG] SOLIDServer - Deleted IP pool (oid): %s\n", d.Id())
+		tflog.Debug(ctx, fmt.Sprintf("Deleted IP pool (oid): %s\n", d.Id()))
 
 		// Unset local ID
 		d.SetId("")
@@ -303,10 +265,10 @@ func resourceippoolDelete(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourceippoolRead(d *schema.ResourceData, meta interface{}) error {
+func resourceippoolRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -354,24 +316,24 @@ func resourceippoolRead(d *schema.ResourceData, meta interface{}) error {
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
 				// Log the error
-				log.Printf("[DEBUG] SOLIDServer - Unable to find IP pool: %s (%s)\n", d.Get("name"), errMsg)
+				tflog.Debug(ctx, fmt.Sprintf("Unable to find IP pool: %s (%s)\n", d.Get("name"), errMsg))
 			}
 		} else {
 			// Log the error
-			log.Printf("[DEBUG] SOLIDServer - Unable to find IP pool (oid): %s\n", d.Id())
+			tflog.Debug(ctx, fmt.Sprintf("Unable to find IP pool (oid): %s\n", d.Id()))
 		}
 
 		// Do not unset the local ID to avoid inconsistency
 
 		// Reporting a failure
-		return fmt.Errorf("SOLIDServer - Unable to find IP pool: %s\n", d.Get("name").(string))
+		return diag.Errorf("Unable to find IP pool: %s\n", d.Get("name").(string))
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourceippoolImportState(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+func resourceippoolImportState(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -419,11 +381,11 @@ func resourceippoolImportState(d *schema.ResourceData, meta interface{}) ([]*sch
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
 				// Log the error
-				log.Printf("[DEBUG] SOLIDServer - Unable to import IP pool (oid): %s (%s)\n", d.Id(), errMsg)
+				tflog.Debug(ctx, fmt.Sprintf("Unable to import IP pool (oid): %s (%s)\n", d.Id(), errMsg))
 			}
 		} else {
 			// Log the error
-			log.Printf("[DEBUG] SOLIDServer - Unable to find and import IP pool (oid): %s\n", d.Id())
+			tflog.Debug(ctx, fmt.Sprintf("Unable to find and import IP pool (oid): %s\n", d.Id()))
 		}
 
 		// Reporting a failure

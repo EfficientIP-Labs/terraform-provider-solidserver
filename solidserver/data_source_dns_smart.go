@@ -1,10 +1,12 @@
 package solidserver
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"log"
 	"net/url"
 	"regexp"
 	"strings"
@@ -12,7 +14,7 @@ import (
 
 func dataSourcednssmart() *schema.Resource {
 	return &schema.Resource{
-		Read: dataSourcednssmartRead,
+		ReadContext: dataSourcednssmartRead,
 
 		Schema: map[string]*schema.Schema{
 			"name": {
@@ -94,7 +96,7 @@ func dataSourcednssmart() *schema.Resource {
 	}
 }
 
-func dataSourcednssmartRead(d *schema.ResourceData, meta interface{}) error {
+func dataSourcednssmartRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	d.SetId("")
@@ -188,17 +190,17 @@ func dataSourcednssmartRead(d *schema.ResourceData, meta interface{}) error {
 
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				log.Printf("[DEBUG] SOLIDServer - Unable read information from DNS SMART: %s (%s)\n", d.Get("name"), errMsg)
+				tflog.Debug(ctx, fmt.Sprintf("Unable read information from DNS SMART: %s (%s)\n", d.Get("name"), errMsg))
 			}
 		} else {
 			// Log the error
-			log.Printf("[DEBUG] SOLIDServer - Unable to read information from DNS SMART: %s\n", d.Get("name"))
+			tflog.Debug(ctx, fmt.Sprintf("Unable to read information from DNS SMART: %s\n", d.Get("name")))
 		}
 
 		// Reporting a failure
-		return fmt.Errorf("SOLIDServer - Unable to find DNS SMART: %s\n", d.Get("name"))
+		return diag.Errorf("Unable to find DNS SMART: %s\n", d.Get("name"))
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }

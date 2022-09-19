@@ -1,10 +1,12 @@
 package solidserver
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"log"
 	"net/url"
 	"regexp"
 	"strings"
@@ -12,13 +14,12 @@ import (
 
 func resourcedevice() *schema.Resource {
 	return &schema.Resource{
-		Create: resourcedeviceCreate,
-		Read:   resourcedeviceRead,
-		Update: resourcedeviceUpdate,
-		Delete: resourcedeviceDelete,
-		Exists: resourcedeviceExists,
+		CreateContext: resourcedeviceCreate,
+		ReadContext:   resourcedeviceRead,
+		UpdateContext: resourcedeviceUpdate,
+		DeleteContext: resourcedeviceDelete,
 		Importer: &schema.ResourceImporter{
-			State: resourcedeviceImportState,
+			StateContext: resourcedeviceImportState,
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -59,44 +60,7 @@ func resourcedevicenamevalidateformat(v interface{}, _ string) ([]string, []erro
 	return nil, []error{fmt.Errorf("Unsupported device name format (it must comply with hostname standard).\n")}
 }
 
-func resourcedeviceExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	s := meta.(*SOLIDserver)
-
-	// Building parameters
-	parameters := url.Values{}
-	parameters.Add("hostdev_id", d.Id())
-
-	log.Printf("[DEBUG] Checking existence of device (oid): %s\n", d.Id())
-
-	// Sending read request
-	resp, body, err := s.Request("get", "rest/hostdev_info", &parameters)
-
-	if err == nil {
-		var buf [](map[string]interface{})
-		json.Unmarshal([]byte(body), &buf)
-
-		// Checking answer
-		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
-			return true, nil
-		}
-
-		if len(buf) > 0 {
-			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				log.Printf("[DEBUG] SOLIDServer - Unable to find device (oid): %s (%s)\n", d.Id(), errMsg)
-			}
-		} else {
-			log.Printf("[DEBUG] SOLIDServer - Unable to find device (oid): %s\n", d.Id())
-		}
-
-		// Unset local ID
-		d.SetId("")
-	}
-
-	// Reporting a failure
-	return false, err
-}
-
-func resourcedeviceCreate(d *schema.ResourceData, meta interface{}) error {
+func resourcedeviceCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -116,7 +80,7 @@ func resourcedeviceCreate(d *schema.ResourceData, meta interface{}) error {
 		// Checking the answer
 		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
 			if oid, oidExist := buf[0]["ret_oid"].(string); oidExist {
-				log.Printf("[DEBUG] SOLIDServer - Created device (oid): %s\n", oid)
+				tflog.Debug(ctx, fmt.Sprintf("Created device (oid): %s\n", oid))
 				d.SetId(oid)
 				return nil
 			}
@@ -125,18 +89,18 @@ func resourcedeviceCreate(d *schema.ResourceData, meta interface{}) error {
 		// Reporting a failure
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				return fmt.Errorf("SOLIDServer - Unable to create device: %s (%s)", strings.ToLower(d.Get("name").(string)), errMsg)
+				return diag.Errorf("Unable to create device: %s (%s)", strings.ToLower(d.Get("name").(string)), errMsg)
 			}
 		}
 
-		return fmt.Errorf("SOLIDServer - Unable to create device: %s\n", strings.ToLower(d.Get("name").(string)))
+		return diag.Errorf("Unable to create device: %s\n", strings.ToLower(d.Get("name").(string)))
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourcedeviceUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourcedeviceUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -157,7 +121,7 @@ func resourcedeviceUpdate(d *schema.ResourceData, meta interface{}) error {
 		// Checking the answer
 		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
 			if oid, oidExist := buf[0]["ret_oid"].(string); oidExist {
-				log.Printf("[DEBUG] SOLIDServer - Updated device (oid): %s\n", oid)
+				tflog.Debug(ctx, fmt.Sprintf("Updated device (oid): %s\n", oid))
 				d.SetId(oid)
 				return nil
 			}
@@ -166,18 +130,18 @@ func resourcedeviceUpdate(d *schema.ResourceData, meta interface{}) error {
 		// Reporting a failure
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				return fmt.Errorf("SOLIDServer - Unable to update device: %s (%s)", strings.ToLower(d.Get("name").(string)), errMsg)
+				return diag.Errorf("Unable to update device: %s (%s)", strings.ToLower(d.Get("name").(string)), errMsg)
 			}
 		}
 
-		return fmt.Errorf("SOLIDServer - Unable to update device: %s\n", strings.ToLower(d.Get("name").(string)))
+		return diag.Errorf("Unable to update device: %s\n", strings.ToLower(d.Get("name").(string)))
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourcedeviceDelete(d *schema.ResourceData, meta interface{}) error {
+func resourcedeviceDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -196,15 +160,15 @@ func resourcedeviceDelete(d *schema.ResourceData, meta interface{}) error {
 			// Reporting a failure
 			if len(buf) > 0 {
 				if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-					return fmt.Errorf("SOLIDServer - Unable to delete device: %s (%s)", strings.ToLower(d.Get("name").(string)), errMsg)
+					return diag.Errorf("Unable to delete device: %s (%s)", strings.ToLower(d.Get("name").(string)), errMsg)
 				}
 			}
 
-			return fmt.Errorf("SOLIDServer - Unable to delete device: %s", strings.ToLower(d.Get("name").(string)))
+			return diag.Errorf("Unable to delete device: %s", strings.ToLower(d.Get("name").(string)))
 		}
 
 		// Log deletion
-		log.Printf("[DEBUG] SOLIDServer - Deleted device (oid): %s\n", d.Id())
+		tflog.Debug(ctx, fmt.Sprintf("Deleted device (oid): %s\n", d.Id()))
 
 		// Unset local ID
 		d.SetId("")
@@ -214,10 +178,10 @@ func resourcedeviceDelete(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourcedeviceRead(d *schema.ResourceData, meta interface{}) error {
+func resourcedeviceRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -257,24 +221,24 @@ func resourcedeviceRead(d *schema.ResourceData, meta interface{}) error {
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
 				// Log the error
-				log.Printf("[DEBUG] SOLIDServer - Unable to find device: %s (%s)\n", strings.ToLower(d.Get("name").(string)), errMsg)
+				tflog.Debug(ctx, fmt.Sprintf("Unable to find device: %s (%s)\n", strings.ToLower(d.Get("name").(string)), errMsg))
 			}
 		} else {
 			// Log the error
-			log.Printf("[DEBUG] SOLIDServer - Unable to find device (oid): %s\n", d.Id())
+			tflog.Debug(ctx, fmt.Sprintf("Unable to find device (oid): %s\n", d.Id()))
 		}
 
 		// Do not unset the local ID to avoid inconsistency
 
 		// Reporting a failure
-		return fmt.Errorf("SOLIDServer - Unable to find device: %s\n", strings.ToLower(d.Get("name").(string)))
+		return diag.Errorf("Unable to find device: %s\n", strings.ToLower(d.Get("name").(string)))
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourcedeviceImportState(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+func resourcedeviceImportState(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -313,10 +277,10 @@ func resourcedeviceImportState(d *schema.ResourceData, meta interface{}) ([]*sch
 
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				log.Printf("[DEBUG] SOLIDServer - Unable to import device(oid): %s (%s)\n", d.Id(), errMsg)
+				tflog.Debug(ctx, fmt.Sprintf("Unable to import device(oid): %s (%s)\n", d.Id(), errMsg))
 			}
 		} else {
-			log.Printf("[DEBUG] SOLIDServer - Unable to find and import device (oid): %s\n", d.Id())
+			tflog.Debug(ctx, fmt.Sprintf("Unable to find and import device (oid): %s\n", d.Id()))
 		}
 
 		// Reporting a failure

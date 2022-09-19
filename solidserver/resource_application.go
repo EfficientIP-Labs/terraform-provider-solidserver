@@ -1,23 +1,24 @@
 package solidserver
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"log"
 	"net/url"
 	"strings"
 )
 
 func resourceapplication() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceapplicationCreate,
-		Read:   resourceapplicationRead,
-		Update: resourceapplicationUpdate,
-		Delete: resourceapplicationDelete,
-		Exists: resourceapplicationExists,
+		CreateContext: resourceapplicationCreate,
+		ReadContext:   resourceapplicationRead,
+		UpdateContext: resourceapplicationUpdate,
+		DeleteContext: resourceapplicationDelete,
 		Importer: &schema.ResourceImporter{
-			State: resourceapplicationImportState,
+			StateContext: resourceapplicationImportState,
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -65,49 +66,7 @@ func resourceapplication() *schema.Resource {
 	}
 }
 
-func resourceapplicationExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	s := meta.(*SOLIDserver)
-
-	// Building parameters
-	parameters := url.Values{}
-	parameters.Add("appapplication_id", d.Id())
-
-	if s.Version < 710 {
-		// Reporting a failure
-		return false, fmt.Errorf("SOLIDServer - Object not supported in this SOLIDserver version")
-	}
-
-	log.Printf("[DEBUG] Checking existence of application (oid): %s\n", d.Id())
-
-	// Sending read request
-	resp, body, err := s.Request("get", "rest/app_application_info", &parameters)
-
-	if err == nil {
-		var buf [](map[string]interface{})
-		json.Unmarshal([]byte(body), &buf)
-
-		// Checking answer
-		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
-			return true, nil
-		}
-
-		if len(buf) > 0 {
-			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				log.Printf("[DEBUG] SOLIDServer - Unable to find application (oid): %s (%s)\n", d.Id(), errMsg)
-			}
-		} else {
-			log.Printf("[DEBUG] SOLIDServer - Unable to find application (oid): %s\n", d.Id())
-		}
-
-		// Unset local ID
-		d.SetId("")
-	}
-
-	// Reporting a failure
-	return false, err
-}
-
-func resourceapplicationCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceapplicationCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -127,7 +86,7 @@ func resourceapplicationCreate(d *schema.ResourceData, meta interface{}) error {
 
 	if s.Version < 710 {
 		// Reporting a failure
-		return fmt.Errorf("SOLIDServer - Object not supported in this SOLIDserver version")
+		return diag.Errorf("Object not supported in this SOLIDserver version")
 	}
 
 	// Sending creation request
@@ -140,7 +99,7 @@ func resourceapplicationCreate(d *schema.ResourceData, meta interface{}) error {
 		// Checking the answer
 		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
 			if oid, oidExist := buf[0]["ret_oid"].(string); oidExist {
-				log.Printf("[DEBUG] SOLIDServer - Created application (oid): %s\n", oid)
+				tflog.Debug(ctx, fmt.Sprintf("Created application (oid): %s\n", oid))
 				d.SetId(oid)
 				return nil
 			}
@@ -149,18 +108,18 @@ func resourceapplicationCreate(d *schema.ResourceData, meta interface{}) error {
 		// Reporting a failure
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				return fmt.Errorf("SOLIDServer - Unable to create application: %s (%s)", d.Get("name").(string), errMsg)
+				return diag.Errorf("Unable to create application: %s (%s)", d.Get("name").(string), errMsg)
 			}
 		}
 
-		return fmt.Errorf("SOLIDServer - Unable to create application: %s\n", d.Get("name").(string))
+		return diag.Errorf("Unable to create application: %s\n", d.Get("name").(string))
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourceapplicationUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceapplicationUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -181,7 +140,7 @@ func resourceapplicationUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	if s.Version < 710 {
 		// Reporting a failure
-		return fmt.Errorf("SOLIDServer - Object not supported in this SOLIDserver version")
+		return diag.Errorf("Object not supported in this SOLIDserver version")
 	}
 
 	// Sending the update request
@@ -194,7 +153,7 @@ func resourceapplicationUpdate(d *schema.ResourceData, meta interface{}) error {
 		// Checking the answer
 		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
 			if oid, oidExist := buf[0]["ret_oid"].(string); oidExist {
-				log.Printf("[DEBUG] SOLIDServer - Updated application (oid): %s\n", oid)
+				tflog.Debug(ctx, fmt.Sprintf("Updated application (oid): %s\n", oid))
 				d.SetId(oid)
 				return nil
 			}
@@ -203,18 +162,18 @@ func resourceapplicationUpdate(d *schema.ResourceData, meta interface{}) error {
 		// Reporting a failure
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				return fmt.Errorf("SOLIDServer - Unable to update application: %s (%s)", d.Get("name").(string), errMsg)
+				return diag.Errorf("Unable to update application: %s (%s)", d.Get("name").(string), errMsg)
 			}
 		}
 
-		return fmt.Errorf("SOLIDServer - Unable to update application: %s\n", d.Get("name").(string))
+		return diag.Errorf("Unable to update application: %s\n", d.Get("name").(string))
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourceapplicationDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceapplicationDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -223,7 +182,7 @@ func resourceapplicationDelete(d *schema.ResourceData, meta interface{}) error {
 
 	if s.Version < 710 {
 		// Reporting a failure
-		return fmt.Errorf("SOLIDServer - Object not supported in this SOLIDserver version")
+		return diag.Errorf("Object not supported in this SOLIDserver version")
 	}
 
 	// Sending the deletion request
@@ -238,15 +197,15 @@ func resourceapplicationDelete(d *schema.ResourceData, meta interface{}) error {
 			// Reporting a failure
 			if len(buf) > 0 {
 				if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-					return fmt.Errorf("SOLIDServer - Unable to delete application: %s (%s)", d.Get("name").(string), errMsg)
+					return diag.Errorf("Unable to delete application: %s (%s)", d.Get("name").(string), errMsg)
 				}
 			}
 
-			return fmt.Errorf("SOLIDServer - Unable to delete application: %s", d.Get("name").(string))
+			return diag.Errorf("Unable to delete application: %s", d.Get("name").(string))
 		}
 
 		// Log deletion
-		log.Printf("[DEBUG] SOLIDServer - Deleted application (oid): %s\n", d.Id())
+		tflog.Debug(ctx, fmt.Sprintf("Deleted application (oid): %s\n", d.Id()))
 
 		// Unset local ID
 		d.SetId("")
@@ -256,10 +215,10 @@ func resourceapplicationDelete(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourceapplicationRead(d *schema.ResourceData, meta interface{}) error {
+func resourceapplicationRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -268,7 +227,7 @@ func resourceapplicationRead(d *schema.ResourceData, meta interface{}) error {
 
 	if s.Version < 710 {
 		// Reporting a failure
-		return fmt.Errorf("SOLIDServer - Object not supported in this SOLIDserver version")
+		return diag.Errorf("Object not supported in this SOLIDserver version")
 	}
 
 	// Sending the read request
@@ -316,24 +275,24 @@ func resourceapplicationRead(d *schema.ResourceData, meta interface{}) error {
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
 				// Log the error
-				log.Printf("[DEBUG] SOLIDServer - Unable to find application: %s (%s)\n", d.Get("name"), errMsg)
+				tflog.Debug(ctx, fmt.Sprintf("Unable to find application: %s (%s)\n", d.Get("name"), errMsg))
 			}
 		} else {
 			// Log the error
-			log.Printf("[DEBUG] SOLIDServer - Unable to find application (oid): %s\n", d.Id())
+			tflog.Debug(ctx, fmt.Sprintf("Unable to find application (oid): %s\n", d.Id()))
 		}
 
 		// Do not unset the local ID to avoid inconsistency
 
 		// Reporting a failure
-		return fmt.Errorf("SOLIDServer - Unable to find application: %s\n", d.Get("name").(string))
+		return diag.Errorf("Unable to find application: %s\n", d.Get("name").(string))
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourceapplicationImportState(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+func resourceapplicationImportState(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -383,10 +342,10 @@ func resourceapplicationImportState(d *schema.ResourceData, meta interface{}) ([
 
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				log.Printf("[DEBUG] SOLIDServer - Unable to import application(oid): %s (%s)\n", d.Id(), errMsg)
+				tflog.Debug(ctx, fmt.Sprintf("Unable to import application(oid): %s (%s)\n", d.Id(), errMsg))
 			}
 		} else {
-			log.Printf("[DEBUG] SOLIDServer - Unable to find and import application (oid): %s\n", d.Id())
+			tflog.Debug(ctx, fmt.Sprintf("Unable to find and import application (oid): %s\n", d.Id()))
 		}
 
 		// Reporting a failure

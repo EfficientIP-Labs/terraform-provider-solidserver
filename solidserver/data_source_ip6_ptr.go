@@ -1,17 +1,17 @@
 package solidserver
 
 import (
-	"fmt"
-	"math/rand"
-	"strconv"
-
+	"context"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+	"math/rand"
+	"strconv"
 )
 
 func dataSourceip6ptr() *schema.Resource {
 	return &schema.Resource{
-		Read: dataSourceip6ptrRead,
+		ReadContext: dataSourceip6ptrRead,
 
 		Schema: map[string]*schema.Schema{
 			"address": {
@@ -29,7 +29,7 @@ func dataSourceip6ptr() *schema.Resource {
 	}
 }
 
-func dataSourceip6ptrRead(d *schema.ResourceData, meta interface{}) error {
+func dataSourceip6ptrRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	dname := ip6toptr(d.Get("address").(string))
 
 	if dname != "" {
@@ -39,5 +39,5 @@ func dataSourceip6ptrRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	// Reporting a failure
-	return fmt.Errorf("SOLIDServer - Unable to convert the following IPv6 address into PTR domain name: %s\n", d.Get("address").(string))
+	return diag.Errorf("Unable to convert the following IPv6 address into PTR domain name: %s\n", d.Get("address").(string))
 }

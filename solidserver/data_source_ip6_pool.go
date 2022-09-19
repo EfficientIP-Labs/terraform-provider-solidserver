@@ -1,17 +1,19 @@
 package solidserver
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"log"
 	"net/url"
 	"strconv"
 )
 
 func dataSourceip6pool() *schema.Resource {
 	return &schema.Resource{
-		Read: dataSourceippoolRead,
+		ReadContext: dataSourceippoolRead,
 
 		Schema: map[string]*schema.Schema{
 			"name": {
@@ -63,7 +65,7 @@ func dataSourceip6pool() *schema.Resource {
 	}
 }
 
-func dataSourceip6poolRead(d *schema.ResourceData, meta interface{}) error {
+func dataSourceip6poolRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 	d.SetId("")
 
@@ -112,17 +114,17 @@ func dataSourceip6poolRead(d *schema.ResourceData, meta interface{}) error {
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
 				// Log the error
-				log.Printf("[DEBUG] SOLIDServer - Unable to read information from IPv6 pool: %s (%s)\n", d.Get("name").(string), errMsg)
+				tflog.Debug(ctx, fmt.Sprintf("Unable to read information from IPv6 pool: %s (%s)\n", d.Get("name").(string), errMsg))
 			}
 		} else {
 			// Log the error
-			log.Printf("[DEBUG] SOLIDServer - Unable to read information from IPv6 pool: %s\n", d.Get("name").(string))
+			tflog.Debug(ctx, fmt.Sprintf("Unable to read information from IPv6 pool: %s\n", d.Get("name").(string)))
 		}
 
 		// Reporting a failure
-		return fmt.Errorf("SOLIDServer - Unable to find IPv6 pool: %s", d.Get("name").(string))
+		return diag.Errorf("Unable to find IPv6 pool: %s", d.Get("name").(string))
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }

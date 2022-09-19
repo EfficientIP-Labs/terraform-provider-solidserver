@@ -1,10 +1,12 @@
 package solidserver
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"log"
 	"net/url"
 	"regexp"
 	"strconv"
@@ -12,7 +14,7 @@ import (
 
 func dataSourceip6address() *schema.Resource {
 	return &schema.Resource{
-		Read: dataSourceip6addressRead,
+		ReadContext: dataSourceip6addressRead,
 
 		Schema: map[string]*schema.Schema{
 			"space": {
@@ -74,7 +76,7 @@ func dataSourceip6address() *schema.Resource {
 	}
 }
 
-func dataSourceip6addressRead(d *schema.ResourceData, meta interface{}) error {
+func dataSourceip6addressRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -128,19 +130,19 @@ func dataSourceip6addressRead(d *schema.ResourceData, meta interface{}) error {
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
 				// Log the error
-				log.Printf("[DEBUG] SOLIDServer - Unable to find IPv6 address: %s (%s)\n", d.Get("name"), errMsg)
+				tflog.Debug(ctx, fmt.Sprintf("Unable to find IPv6 address: %s (%s)\n", d.Get("name"), errMsg))
 			}
 		} else {
 			// Log the error
-			log.Printf("[DEBUG] SOLIDServer - Unable to find IPv6 address (oid): %s\n", d.Id())
+			tflog.Debug(ctx, fmt.Sprintf("Unable to find IPv6 address (oid): %s\n", d.Id()))
 		}
 
 		// Do not unset the local ID to avoid inconsistency
 
 		// Reporting a failure
-		return fmt.Errorf("SOLIDServer - Unable to find IPv6 address: %s", d.Get("name").(string))
+		return diag.Errorf("Unable to find IPv6 address: %s", d.Get("name").(string))
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }

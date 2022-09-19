@@ -109,7 +109,7 @@ func resourceipspaceUpdate(ctx context.Context, d *schema.ResourceData, meta int
 		// Checking the answer
 		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
 			if oid, oidExist := buf[0]["ret_oid"].(string); oidExist {
-				tflog.Debug("Updated IP space (oid): %s\n", oid)
+				tflog.Debug(ctx, fmt.Sprintf("Updated IP space (oid): %s\n", oid))
 				d.SetId(oid)
 				return nil
 			}
@@ -156,7 +156,7 @@ func resourceipspaceDelete(ctx context.Context, d *schema.ResourceData, meta int
 		}
 
 		// Log deletion
-		tflog.Debug("Deleted IP space (oid): %s\n", d.Id())
+		tflog.Debug(ctx, fmt.Sprintf("Deleted IP space (oid): %s\n", d.Id()))
 
 		// Unset local ID
 		d.SetId("")
@@ -209,11 +209,11 @@ func resourceipspaceRead(ctx context.Context, d *schema.ResourceData, meta inter
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
 				// Log the error
-				tflog.Debug("Unable to find IP space: %s (%s)\n", d.Get("name"), errMsg)
+				tflog.Debug(ctx, fmt.Sprintf("Unable to find IP space: %s (%s)\n", d.Get("name"), errMsg))
 			}
 		} else {
 			// Log the error
-			tflog.Debug("Unable to find IP space (oid): %s\n", d.Id())
+			tflog.Debug(ctx, fmt.Sprintf("Unable to find IP space (oid): %s\n", d.Id()))
 		}
 
 		// Do not unset the local ID to avoid inconsistency
@@ -265,10 +265,10 @@ func resourceipspaceImportState(ctx context.Context, d *schema.ResourceData, met
 
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				tflog.Debug("Unable to import IP space(oid): %s (%s)\n", d.Id(), errMsg)
+				tflog.Debug(ctx, fmt.Sprintf("Unable to import IP space(oid): %s (%s)\n", d.Id(), errMsg))
 			}
 		} else {
-			tflog.Debug("Unable to find and import IP space (oid): %s\n", d.Id())
+			tflog.Debug(ctx, fmt.Sprintf("Unable to find and import IP space (oid): %s\n", d.Id()))
 		}
 
 		// Reporting a failure

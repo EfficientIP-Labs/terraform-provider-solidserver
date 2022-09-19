@@ -1,26 +1,26 @@
 package solidserver
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"net/url"
 	"strconv"
 	"strings"
-
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
 
 func resourceip6pool() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceip6poolCreate,
-		Read:   resourceip6poolRead,
-		Update: resourceip6poolUpdate,
-		Delete: resourceip6poolDelete,
-		Exists: resourceip6poolExists,
+		CreateContext: resourceip6poolCreate,
+		ReadContext:   resourceip6poolRead,
+		UpdateContext: resourceip6poolUpdate,
+		DeleteContext: resourceip6poolDelete,
 		Importer: &schema.ResourceImporter{
-			State: resourceip6poolImportState,
+			StateContext: resourceip6poolImportState,
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -93,59 +93,21 @@ func resourceip6pool() *schema.Resource {
 	}
 }
 
-func resourceip6poolExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	s := meta.(*SOLIDserver)
-
-	// Building parameters
-	parameters := url.Values{}
-	parameters.Add("pool6_id", d.Id())
-
-	log.Printf("[DEBUG] Checking existence of IPv6 pool (oid): %s\n", d.Id())
-
-	// Sending the read request
-	resp, body, err := s.Request("get", "rest/ip6_pool6_info", &parameters)
-
-	if err == nil {
-		var buf [](map[string]interface{})
-		json.Unmarshal([]byte(body), &buf)
-
-		// Checking the answer
-		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
-			return true, nil
-		}
-
-		if len(buf) > 0 {
-			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				// Log the error
-				log.Printf("[DEBUG] SOLIDServer - Unable to find IPv6 pool (oid): %s (%s)\n", d.Id(), errMsg)
-			}
-		} else {
-			// Log the error
-			log.Printf("[DEBUG] SOLIDServer - Unable to find IPv6 pool (oid): %s\n", d.Id())
-		}
-
-		// Unset local ID
-		d.SetId("")
-	}
-
-	return false, err
-}
-
-func resourceip6poolCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceip6poolCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Gather required ID(s) from provided information
 	siteID, siteErr := ipsiteidbyname(d.Get("space").(string), meta)
 	if siteErr != nil {
 		// Reporting a failure
-		return siteErr
+		return diag.FromErr(siteErr)
 	}
 
 	// Gather required ID(s) from provided subnet information
 	subnetInfo, subnetErr := ip6subnetinfobyname(siteID, d.Get("subnet").(string), true, meta)
 	if subnetErr != nil {
 		// Reporting a failure
-		return subnetErr
+		return diag.FromErr(subnetErr)
 	}
 
 	// Building parameters
@@ -185,7 +147,7 @@ func resourceip6poolCreate(d *schema.ResourceData, meta interface{}) error {
 		// Checking the answer
 		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
 			if oid, oidExist := buf[0]["ret_oid"].(string); oidExist {
-				log.Printf("[DEBUG] SOLIDServer - Created IPv6 pool (oid): %s\n", oid)
+				tflog.Debug(ctx, fmt.Sprintf("Created IPv6 pool (oid): %s\n", oid))
 				d.SetId(oid)
 
 				d.Set("prefix", subnetInfo["start_addr"].(string)+"/"+strconv.Itoa(subnetInfo["prefix_length"].(int)))
@@ -198,18 +160,18 @@ func resourceip6poolCreate(d *schema.ResourceData, meta interface{}) error {
 		// Reporting a failure
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				return fmt.Errorf("SOLIDServer - Unable to create IPv6 pool: %s (%s)", d.Get("name").(string), errMsg)
+				return diag.Errorf("Unable to create IPv6 pool: %s (%s)", d.Get("name").(string), errMsg)
 			}
 		}
 
-		return fmt.Errorf("SOLIDServer - Unable to create IPv6 pool: %s\n", d.Get("name").(string))
+		return diag.Errorf("Unable to create IPv6 pool: %s\n", d.Get("name").(string))
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourceip6poolUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceip6poolUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -247,7 +209,7 @@ func resourceip6poolUpdate(d *schema.ResourceData, meta interface{}) error {
 		// Checking the answer
 		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
 			if oid, oidExist := buf[0]["ret_oid"].(string); oidExist {
-				log.Printf("[DEBUG] SOLIDServer - Updated IPv6 pool (oid): %s\n", oid)
+				tflog.Debug(ctx, fmt.Sprintf("Updated IPv6 pool (oid): %s\n", oid))
 				d.SetId(oid)
 				return nil
 			}
@@ -256,18 +218,18 @@ func resourceip6poolUpdate(d *schema.ResourceData, meta interface{}) error {
 		// Reporting a failure
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				return fmt.Errorf("SOLIDServer - Unable to update IPv6 pool: %s (%s)", d.Get("name").(string), errMsg)
+				return diag.Errorf("Unable to update IPv6 pool: %s (%s)", d.Get("name").(string), errMsg)
 			}
 		}
 
-		return fmt.Errorf("SOLIDServer - Unable to update IPv6 pool: %s\n", d.Get("name").(string))
+		return diag.Errorf("Unable to update IPv6 pool: %s\n", d.Get("name").(string))
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourceip6poolDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceip6poolDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -286,15 +248,15 @@ func resourceip6poolDelete(d *schema.ResourceData, meta interface{}) error {
 			// Reporting a failure
 			if len(buf) > 0 {
 				if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-					return fmt.Errorf("SOLIDServer - Unable to delete IPv6 pool: %s (%s)", d.Get("name").(string), errMsg)
+					return diag.Errorf("Unable to delete IPv6 pool: %s (%s)", d.Get("name").(string), errMsg)
 				}
 			}
 
-			return fmt.Errorf("SOLIDServer - Unable to delete IPv6 pool: %s", d.Get("name").(string))
+			return diag.Errorf("Unable to delete IPv6 pool: %s", d.Get("name").(string))
 		}
 
 		// Log deletion
-		log.Printf("[DEBUG] SOLIDServer - Deleted IPv6 pool (oid): %s\n", d.Id())
+		tflog.Debug(ctx, fmt.Sprintf("Deleted IPv6 pool (oid): %s\n", d.Id()))
 
 		// Unset local ID
 		d.SetId("")
@@ -304,10 +266,10 @@ func resourceip6poolDelete(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourceip6poolRead(d *schema.ResourceData, meta interface{}) error {
+func resourceip6poolRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -355,24 +317,24 @@ func resourceip6poolRead(d *schema.ResourceData, meta interface{}) error {
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
 				// Log the error
-				log.Printf("[DEBUG] SOLIDServer - Unable to find IPv6 pool: %s (%s)\n", d.Get("name"), errMsg)
+				tflog.Debug(ctx, fmt.Sprintf("Unable to find IPv6 pool: %s (%s)\n", d.Get("name"), errMsg))
 			}
 		} else {
 			// Log the error
-			log.Printf("[DEBUG] SOLIDServer - Unable to find IPv6 pool (oid): %s\n", d.Id())
+			tflog.Debug(ctx, fmt.Sprintf("Unable to find IPv6 pool (oid): %s\n", d.Id()))
 		}
 
 		// Do not unset the local ID to avoid inconsistency
 
 		// Reporting a failure
-		return fmt.Errorf("SOLIDServer - Unable to find IPv6 pool: %s\n", d.Get("name").(string))
+		return diag.Errorf("Unable to find IPv6 pool: %s\n", d.Get("name").(string))
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourceip6poolImportState(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+func resourceip6poolImportState(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -420,11 +382,11 @@ func resourceip6poolImportState(d *schema.ResourceData, meta interface{}) ([]*sc
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
 				// Log the error
-				log.Printf("[DEBUG] SOLIDServer - Unable to import IPv6 pool (oid): %s (%s)\n", d.Id(), errMsg)
+				tflog.Debug(ctx, fmt.Sprintf("Unable to import IPv6 pool (oid): %s (%s)\n", d.Id(), errMsg))
 			}
 		} else {
 			// Log the error
-			log.Printf("[DEBUG] SOLIDServer - Unable to find and import IPv6 pool (oid): %s\n", d.Id())
+			tflog.Debug(ctx, fmt.Sprintf("Unable to find and import IPv6 pool (oid): %s\n", d.Id()))
 		}
 
 		// Reporting a failure

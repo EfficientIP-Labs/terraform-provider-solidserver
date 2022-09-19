@@ -1,11 +1,13 @@
 package solidserver
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"log"
 	"net/url"
 	"regexp"
 	"strings"
@@ -13,13 +15,12 @@ import (
 
 func resourcednszone() *schema.Resource {
 	return &schema.Resource{
-		Create: resourcednszoneCreate,
-		Read:   resourcednszoneRead,
-		Update: resourcednszoneUpdate,
-		Delete: resourcednszoneDelete,
-		Exists: resourcednszoneExists,
+		CreateContext: resourcednszoneCreate,
+		ReadContext:   resourcednszoneRead,
+		UpdateContext: resourcednszoneUpdate,
+		DeleteContext: resourcednszoneDelete,
 		Importer: &schema.ResourceImporter{
-			State: resourcednszoneImportState,
+			StateContext: resourcednszoneImportState,
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -110,51 +111,14 @@ func resourcednszonevalidatetype(v interface{}, _ string) ([]string, []error) {
 	}
 }
 
-func resourcednszoneExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	s := meta.(*SOLIDserver)
-
-	// Building parameters
-	parameters := url.Values{}
-	parameters.Add("dnszone_id", d.Id())
-
-	log.Printf("[DEBUG] Checking existence of DNS zone (oid): %s\n", d.Id())
-
-	// Sending the read request
-	resp, body, err := s.Request("get", "rest/dns_zone_info", &parameters)
-
-	if err == nil {
-		var buf [](map[string]interface{})
-		json.Unmarshal([]byte(body), &buf)
-
-		// Checking the answer
-		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
-			return true, nil
-		}
-
-		if len(buf) > 0 {
-			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				log.Printf("[DEBUG] SOLIDServer - Unable to find DNS zone (oid): %s (%s)\n", d.Id(), errMsg)
-			}
-		} else {
-			log.Printf("[DEBUG] SOLIDServer - Unable to find DNS zone (oid): %s\n", d.Id())
-		}
-
-		// Unset local ID
-		d.SetId("")
-	}
-
-	// Reporting a failure
-	return false, err
-}
-
-func resourcednszoneCreate(d *schema.ResourceData, meta interface{}) error {
+func resourcednszoneCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Gather required ID(s) from provided information
 	siteID, siteErr := ipsiteidbyname(d.Get("space").(string), meta)
 	if siteErr != nil {
 		// Reporting a failure
-		return siteErr
+		return diag.FromErr(siteErr)
 	}
 
 	// Building parameters
@@ -174,14 +138,14 @@ func resourcednszoneCreate(d *schema.ResourceData, meta interface{}) error {
 	alsoNotifies := ""
 	for _, alsoNotify := range toStringArray(d.Get("also_notify").([]interface{})) {
 		if match, _ := regexp.MatchString(regexpIPPort, alsoNotify); match == false {
-			return fmt.Errorf("SOLIDServer - Only IP:Port format is supported")
+			return diag.Errorf("Only IP:Port format is supported")
 		}
 		alsoNotifies += strings.Replace(alsoNotify, ":", " port ", 1) + ";"
 	}
 
 	if d.Get("notify").(string) == "" || strings.ToLower(d.Get("notify").(string)) == "no" {
 		if alsoNotifies != "" {
-			return fmt.Errorf("SOLIDServer - Error creating DNS zone: %s (Notify set to 'Inherited' or 'No' but also_notify list is not empty).", strings.ToLower(d.Get("name").(string)))
+			return diag.Errorf("Error creating DNS zone: %s (Notify set to 'Inherited' or 'No' but also_notify list is not empty).", strings.ToLower(d.Get("name").(string)))
 		}
 		parameters.Add("dnszone_also_notify", alsoNotifies)
 	} else {
@@ -210,7 +174,7 @@ func resourcednszoneCreate(d *schema.ResourceData, meta interface{}) error {
 		// Checking the answer
 		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
 			if oid, oidExist := buf[0]["ret_oid"].(string); oidExist {
-				log.Printf("[DEBUG] SOLIDServer - Created DNS zone (oid): %s\n", oid)
+				tflog.Debug(ctx, fmt.Sprintf("Created DNS zone (oid): %s\n", oid))
 				d.SetId(oid)
 				return nil
 			}
@@ -220,27 +184,27 @@ func resourcednszoneCreate(d *schema.ResourceData, meta interface{}) error {
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
 				if errParam, errParamExist := buf[0]["parameters"].(string); errParamExist {
-					return fmt.Errorf("SOLIDServer - Unable to create DNS zone: %s (%s - %s)", d.Get("name").(string), errMsg, errParam)
+					return diag.Errorf("Unable to create DNS zone: %s (%s - %s)", d.Get("name").(string), errMsg, errParam)
 				}
-				return fmt.Errorf("SOLIDServer - Unable to create DNS zone: %s (%s)", d.Get("name").(string), errMsg)
+				return diag.Errorf("Unable to create DNS zone: %s (%s)", d.Get("name").(string), errMsg)
 			}
 		}
 
-		return fmt.Errorf("SOLIDServer - Unable to create DNS zone: %s\n", d.Get("name").(string))
+		return diag.Errorf("Unable to create DNS zone: %s\n", d.Get("name").(string))
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourcednszoneUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourcednszoneUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Gather required ID(s) from provided information
 	siteID, siteErr := ipsiteidbyname(d.Get("space").(string), meta)
 	if siteErr != nil {
 		// Reporting a failure
-		return siteErr
+		return diag.FromErr(siteErr)
 	}
 
 	// Building parameters
@@ -258,14 +222,14 @@ func resourcednszoneUpdate(d *schema.ResourceData, meta interface{}) error {
 	alsoNotifies := ""
 	for _, alsoNotify := range toStringArray(d.Get("also_notify").([]interface{})) {
 		if match, _ := regexp.MatchString(regexpIPPort, alsoNotify); match == false {
-			return fmt.Errorf("SOLIDServer - Only IP:Port format is supported")
+			return diag.Errorf("Only IP:Port format is supported")
 		}
 		alsoNotifies += strings.Replace(alsoNotify, ":", " port ", 1) + ";"
 	}
 
 	if d.Get("notify").(string) == "" || strings.ToLower(d.Get("notify").(string)) == "no" {
 		if alsoNotifies != "" {
-			return fmt.Errorf("SOLIDServer - Error updating DNS zone: %s (Notify set to 'Inherited' or 'No' but also_notify list is not empty).", strings.ToLower(d.Get("name").(string)))
+			return diag.Errorf("Error updating DNS zone: %s (Notify set to 'Inherited' or 'No' but also_notify list is not empty).", strings.ToLower(d.Get("name").(string)))
 		}
 		parameters.Add("dnszone_also_notify", alsoNotifies)
 	} else {
@@ -294,7 +258,7 @@ func resourcednszoneUpdate(d *schema.ResourceData, meta interface{}) error {
 		// Checking the answer
 		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
 			if oid, oidExist := buf[0]["ret_oid"].(string); oidExist {
-				log.Printf("[DEBUG] SOLIDServer - Updated DNS zone (oid): %s\n", oid)
+				tflog.Debug(ctx, fmt.Sprintf("Updated DNS zone (oid): %s\n", oid))
 				d.SetId(oid)
 				return nil
 			}
@@ -304,20 +268,20 @@ func resourcednszoneUpdate(d *schema.ResourceData, meta interface{}) error {
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
 				if errParam, errParamExist := buf[0]["parameters"].(string); errParamExist {
-					return fmt.Errorf("SOLIDServer - Unable to update DNS zone: %s (%s - %s)", d.Get("name").(string), errMsg, errParam)
+					return diag.Errorf("Unable to update DNS zone: %s (%s - %s)", d.Get("name").(string), errMsg, errParam)
 				}
-				return fmt.Errorf("SOLIDServer - Unable to update DNS zone: %s (%s)", d.Get("name").(string), errMsg)
+				return diag.Errorf("Unable to update DNS zone: %s (%s)", d.Get("name").(string), errMsg)
 			}
 		}
 
-		return fmt.Errorf("SOLIDServer - Unable to update DNS zone: %s\n", d.Get("name").(string))
+		return diag.Errorf("Unable to update DNS zone: %s\n", d.Get("name").(string))
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourcednszoneDelete(d *schema.ResourceData, meta interface{}) error {
+func resourcednszoneDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -340,15 +304,15 @@ func resourcednszoneDelete(d *schema.ResourceData, meta interface{}) error {
 			// Reporting a failure
 			if len(buf) > 0 {
 				if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-					return fmt.Errorf("SOLIDServer - Unable to delete DNS zone: %s (%s)", d.Get("name").(string), errMsg)
+					return diag.Errorf("Unable to delete DNS zone: %s (%s)", d.Get("name").(string), errMsg)
 				}
 			}
 
-			return fmt.Errorf("SOLIDServer - Unable to delete DNS zone: %s", d.Get("name").(string))
+			return diag.Errorf("Unable to delete DNS zone: %s", d.Get("name").(string))
 		}
 
 		// Log deletion
-		log.Printf("[DEBUG] SOLIDServer - Deleted DNS zone (oid): %s\n", d.Id())
+		tflog.Debug(ctx, fmt.Sprintf("Deleted DNS zone (oid): %s\n", d.Id()))
 
 		// Unset local ID
 		d.SetId("")
@@ -358,10 +322,10 @@ func resourcednszoneDelete(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourcednszoneRead(d *schema.ResourceData, meta interface{}) error {
+func resourcednszoneRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -425,24 +389,24 @@ func resourcednszoneRead(d *schema.ResourceData, meta interface{}) error {
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
 				// Log the error
-				log.Printf("[DEBUG] SOLIDServer - Unable to find DNS zone: %s (%s)\n", d.Get("name"), errMsg)
+				tflog.Debug(ctx, fmt.Sprintf("Unable to find DNS zone: %s (%s)\n", d.Get("name"), errMsg))
 			}
 		} else {
 			// Log the error
-			log.Printf("[DEBUG] SOLIDServer - Unable to find DNS zone (oid): %s\n", d.Id())
+			tflog.Debug(ctx, fmt.Sprintf("Unable to find DNS zone (oid): %s\n", d.Id()))
 		}
 
 		// Do not unset the local ID to avoid inconsistency
 
 		// Reporting a failure
-		return fmt.Errorf("SOLIDServer - Unable to find DNS zone: %s\n", d.Get("name").(string))
+		return diag.Errorf("Unable to find DNS zone: %s\n", d.Get("name").(string))
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourcednszoneImportState(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+func resourcednszoneImportState(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -505,10 +469,10 @@ func resourcednszoneImportState(d *schema.ResourceData, meta interface{}) ([]*sc
 
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				log.Printf("[DEBUG] SOLIDServer - Unable to import DNS zone (oid): %s (%s)\n", d.Id(), errMsg)
+				tflog.Debug(ctx, fmt.Sprintf("Unable to import DNS zone (oid): %s (%s)\n", d.Id(), errMsg))
 			}
 		} else {
-			log.Printf("[DEBUG] SOLIDServer - Unable to find and import DNS zone (oid): %s\n", d.Id())
+			tflog.Debug(ctx, fmt.Sprintf("Unable to find and import DNS zone (oid): %s\n", d.Id()))
 		}
 
 		// Reporting a failure

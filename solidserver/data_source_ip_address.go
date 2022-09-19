@@ -1,10 +1,12 @@
 package solidserver
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"log"
 	"net/url"
 	"regexp"
 	"strconv"
@@ -12,7 +14,7 @@ import (
 
 func dataSourceipaddress() *schema.Resource {
 	return &schema.Resource{
-		Read: dataSourceipaddressRead,
+		ReadContext: dataSourceipaddressRead,
 
 		Schema: map[string]*schema.Schema{
 			"space": {
@@ -79,7 +81,7 @@ func dataSourceipaddress() *schema.Resource {
 	}
 }
 
-func dataSourceipaddressRead(d *schema.ResourceData, meta interface{}) error {
+func dataSourceipaddressRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -135,19 +137,19 @@ func dataSourceipaddressRead(d *schema.ResourceData, meta interface{}) error {
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
 				// Log the error
-				log.Printf("[DEBUG] SOLIDServer - Unable to find IP address: %s (%s)\n", d.Get("name"), errMsg)
+				tflog.Debug(ctx, fmt.Sprintf("Unable to find IP address: %s (%s)\n", d.Get("name"), errMsg))
 			}
 		} else {
 			// Log the error
-			log.Printf("[DEBUG] SOLIDServer - Unable to find IP address (oid): %s\n", d.Id())
+			tflog.Debug(ctx, fmt.Sprintf("Unable to find IP address (oid): %s\n", d.Id()))
 		}
 
 		// Do not unset the local ID to avoid inconsistency
 
 		// Reporting a failure
-		return fmt.Errorf("SOLIDServer - Unable to find IP address: %s", d.Get("name").(string))
+		return diag.Errorf("Unable to find IP address: %s", d.Get("name").(string))
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }

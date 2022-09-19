@@ -1,16 +1,18 @@
 package solidserver
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"log"
 	"net/url"
 )
 
 func dataSourcecdbdata() *schema.Resource {
 	return &schema.Resource{
-		Read: dataSourcecdbdataRead,
+		ReadContext: dataSourcecdbdataRead,
 
 		Schema: map[string]*schema.Schema{
 			"custom_db": {
@@ -72,7 +74,7 @@ func dataSourcecdbdata() *schema.Resource {
 	}
 }
 
-func dataSourcecdbdataRead(d *schema.ResourceData, meta interface{}) error {
+func dataSourcecdbdataRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 	d.SetId("")
 
@@ -112,17 +114,17 @@ func dataSourcecdbdataRead(d *schema.ResourceData, meta interface{}) error {
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
 				// Log the error
-				log.Printf("[DEBUG] SOLIDServer - Unable to read information from custom DB data: %s [%s] (%s)\n", d.Get("custom_db").(string), d.Get("value1").(string), errMsg)
+				tflog.Debug(ctx, fmt.Sprintf("Unable to read information from custom DB data: %s [%s] (%s)\n", d.Get("custom_db").(string), d.Get("value1").(string), errMsg))
 			}
 		} else {
 			// Log the error
-			log.Printf("[DEBUG] SOLIDServer - Unable to read information from custom DB data: %s [%s]\n", d.Get("custom_db").(string), d.Get("value1").(string))
+			tflog.Debug(ctx, fmt.Sprintf("Unable to read information from custom DB data: %s [%s]\n", d.Get("custom_db").(string), d.Get("value1").(string)))
 		}
 
 		// Reporting a failure
-		return fmt.Errorf("SOLIDServer - Unable to find custom DB: %s [%s]\n", d.Get("custom_db").(string), d.Get("value1").(string))
+		return diag.Errorf("Unable to find custom DB: %s [%s]\n", d.Get("custom_db").(string), d.Get("value1").(string))
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }

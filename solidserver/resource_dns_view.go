@@ -2,11 +2,13 @@ package solidserver
 
 import (
 	//"encoding/hex"
+	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"log"
 	"net/url"
 	"regexp"
 	"strconv"
@@ -16,13 +18,12 @@ import (
 
 func resourcednsview() *schema.Resource {
 	return &schema.Resource{
-		Create: resourcednsviewCreate,
-		Read:   resourcednsviewRead,
-		Update: resourcednsviewUpdate,
-		Delete: resourcednsviewDelete,
-		Exists: resourcednsviewExists,
+		CreateContext: resourcednsviewCreate,
+		ReadContext:   resourcednsviewRead,
+		UpdateContext: resourcednsviewUpdate,
+		DeleteContext: resourcednsviewDelete,
 		Importer: &schema.ResourceImporter{
-			State: resourcednsviewImportState,
+			StateContext: resourcednsviewImportState,
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -135,44 +136,7 @@ func resourcednsview() *schema.Resource {
 	}
 }
 
-func resourcednsviewExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	s := meta.(*SOLIDserver)
-
-	// Building parameters
-	parameters := url.Values{}
-	parameters.Add("dnsview_id", d.Id())
-
-	log.Printf("[DEBUG] Checking existence of DNS view (oid): %s\n", d.Id())
-
-	// Sending read request
-	resp, body, err := s.Request("get", "rest/dns_view_info", &parameters)
-
-	if err == nil {
-		var buf [](map[string]interface{})
-		json.Unmarshal([]byte(body), &buf)
-
-		// Checking answer
-		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
-			return true, nil
-		}
-
-		if len(buf) > 0 {
-			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				log.Printf("[DEBUG] SOLIDServer - Unable to find DNS view (oid): %s (%s)\n", d.Id(), errMsg)
-			}
-		} else {
-			log.Printf("[DEBUG] SOLIDServer - Unable to find DNS view (oid): %s\n", d.Id())
-		}
-
-		// Unset local ID
-		d.SetId("")
-	}
-
-	// Reporting a failure
-	return false, err
-}
-
-func resourcednsviewCreate(d *schema.ResourceData, meta interface{}) error {
+func resourcednsviewCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -193,7 +157,7 @@ func resourcednsviewCreate(d *schema.ResourceData, meta interface{}) error {
 	allowTransfers := ""
 	for _, allowTransfer := range toStringArray(d.Get("allow_transfer").([]interface{})) {
 		if match, _ := regexp.MatchString(regexpNetworkAcl, allowTransfer); match == false {
-			return fmt.Errorf("SOLIDServer - Only network prefixes are supported for DNS view's allow_transfer parameter")
+			return diag.Errorf("Only network prefixes are supported for DNS view's allow_transfer parameter")
 		}
 		allowTransfers += allowTransfer + ";"
 	}
@@ -203,7 +167,7 @@ func resourcednsviewCreate(d *schema.ResourceData, meta interface{}) error {
 	allowQueries := ""
 	for _, allowQuery := range toStringArray(d.Get("allow_query").([]interface{})) {
 		if match, _ := regexp.MatchString(regexpNetworkAcl, allowQuery); match == false {
-			return fmt.Errorf("SOLIDServer - Only network prefixes are supported for DNS view's allow_query parameter")
+			return diag.Errorf("Only network prefixes are supported for DNS view's allow_query parameter")
 		}
 		allowQueries += allowQuery + ";"
 	}
@@ -213,7 +177,7 @@ func resourcednsviewCreate(d *schema.ResourceData, meta interface{}) error {
 	allowRecursions := ""
 	for _, allowRecursion := range toStringArray(d.Get("allow_recursion").([]interface{})) {
 		if match, _ := regexp.MatchString(regexpNetworkAcl, allowRecursion); match == false {
-			return fmt.Errorf("SOLIDServer - Only network prefixes are supported for DNS view's allow_recursion parameter")
+			return diag.Errorf("Only network prefixes are supported for DNS view's allow_recursion parameter")
 		}
 		allowRecursions += allowRecursion + ";"
 	}
@@ -223,7 +187,7 @@ func resourcednsviewCreate(d *schema.ResourceData, meta interface{}) error {
 	matchClients := ""
 	for _, matchClient := range toStringArray(d.Get("match_clients").([]interface{})) {
 		if match, _ := regexp.MatchString(regexpNetworkAcl, matchClient); match == false {
-			return fmt.Errorf("SOLIDServer - Only network prefixes are supported for DNS view's match_clients parameter")
+			return diag.Errorf("Only network prefixes are supported for DNS view's match_clients parameter")
 		}
 		matchClients += matchClient + ";"
 	}
@@ -233,7 +197,7 @@ func resourcednsviewCreate(d *schema.ResourceData, meta interface{}) error {
 	matchTos := ""
 	for _, matchTo := range toStringArray(d.Get("match_to").([]interface{})) {
 		if match, _ := regexp.MatchString(regexpNetworkAcl, matchTo); match == false {
-			return fmt.Errorf("SOLIDServer - Only network prefixes are supported for DNS view match_to parameter")
+			return diag.Errorf("Only network prefixes are supported for DNS view match_to parameter")
 		}
 		matchTos += matchTo + ";"
 	}
@@ -252,7 +216,7 @@ func resourcednsviewCreate(d *schema.ResourceData, meta interface{}) error {
 		// Checking the answer
 		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
 			if oid, oidExist := buf[0]["ret_oid"].(string); oidExist {
-				log.Printf("[DEBUG] SOLIDServer - Created DNS view (oid): %s\n", oid)
+				tflog.Debug(ctx, fmt.Sprintf("Created DNS view (oid): %s\n", oid))
 				d.SetId(oid)
 
 				// Building forward mode and forward list
@@ -263,7 +227,7 @@ func resourcednsviewCreate(d *schema.ResourceData, meta interface{}) error {
 
 				if d.Get("forward").(string) == "none" {
 					if fwdList != "" {
-						return fmt.Errorf("SOLIDServer - Error creating DNS view: %s (Forward mode set to 'none' but forwarders list is not empty).", strings.ToLower(d.Get("name").(string)))
+						return diag.Errorf("Error creating DNS view: %s (Forward mode set to 'none' but forwarders list is not empty).", strings.ToLower(d.Get("name").(string)))
 					}
 					// NOT required at creation time - dnsparamunset(d.Get("dnsserver").(string), oid, "forward", meta)
 					dnsparamset(d.Get("dnsserver").(string), oid, "forwarders", "", meta)
@@ -280,20 +244,20 @@ func resourcednsviewCreate(d *schema.ResourceData, meta interface{}) error {
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
 				if errParam, errParamExist := buf[0]["parameters"].(string); errParamExist {
-					return fmt.Errorf("SOLIDServer - Unable to create DNS view: %s (%s - %s)", strings.ToLower(d.Get("name").(string)), errMsg, errParam)
+					return diag.Errorf("Unable to create DNS view: %s (%s - %s)", strings.ToLower(d.Get("name").(string)), errMsg, errParam)
 				}
-				return fmt.Errorf("SOLIDServer - Unable to create DNS view: %s (%s)", strings.ToLower(d.Get("name").(string)), errMsg)
+				return diag.Errorf("Unable to create DNS view: %s (%s)", strings.ToLower(d.Get("name").(string)), errMsg)
 			}
 		}
 
-		return fmt.Errorf("SOLIDServer - Unable to create DNS view: %s\n", strings.ToLower(d.Get("name").(string)))
+		return diag.Errorf("Unable to create DNS view: %s\n", strings.ToLower(d.Get("name").(string)))
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourcednsviewUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourcednsviewUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -315,7 +279,7 @@ func resourcednsviewUpdate(d *schema.ResourceData, meta interface{}) error {
 	allowTransfers := ""
 	for _, allowTransfer := range toStringArray(d.Get("allow_transfer").([]interface{})) {
 		if match, _ := regexp.MatchString(regexpNetworkAcl, allowTransfer); match == false {
-			return fmt.Errorf("SOLIDServer - Only network prefixes are supported for DNS view's allow_transfer parameter")
+			return diag.Errorf("Only network prefixes are supported for DNS view's allow_transfer parameter")
 		}
 		allowTransfers += allowTransfer + ";"
 	}
@@ -325,7 +289,7 @@ func resourcednsviewUpdate(d *schema.ResourceData, meta interface{}) error {
 	allowQueries := ""
 	for _, allowQuery := range toStringArray(d.Get("allow_query").([]interface{})) {
 		if match, _ := regexp.MatchString(regexpNetworkAcl, allowQuery); match == false {
-			return fmt.Errorf("SOLIDServer - Only network prefixes are supported for DNS view's allow_query parameter")
+			return diag.Errorf("Only network prefixes are supported for DNS view's allow_query parameter")
 		}
 		allowQueries += allowQuery + ";"
 	}
@@ -335,7 +299,7 @@ func resourcednsviewUpdate(d *schema.ResourceData, meta interface{}) error {
 	allowRecursions := ""
 	for _, allowRecursion := range toStringArray(d.Get("allow_recursion").([]interface{})) {
 		if match, _ := regexp.MatchString(regexpNetworkAcl, allowRecursion); match == false {
-			return fmt.Errorf("SOLIDServer - Only network prefixes are supported for DNS view's allow_recursion parameter")
+			return diag.Errorf("Only network prefixes are supported for DNS view's allow_recursion parameter")
 		}
 		allowRecursions += allowRecursion + ";"
 	}
@@ -345,7 +309,7 @@ func resourcednsviewUpdate(d *schema.ResourceData, meta interface{}) error {
 	matchClients := ""
 	for _, matchClient := range toStringArray(d.Get("match_clients").([]interface{})) {
 		if match, _ := regexp.MatchString(regexpNetworkAcl, matchClient); match == false {
-			return fmt.Errorf("SOLIDServer - Only network prefixes are supported for DNS view's match_clients parameter")
+			return diag.Errorf("Only network prefixes are supported for DNS view's match_clients parameter")
 		}
 		matchClients += matchClient + ";"
 	}
@@ -355,7 +319,7 @@ func resourcednsviewUpdate(d *schema.ResourceData, meta interface{}) error {
 	matchTos := ""
 	for _, matchTo := range toStringArray(d.Get("match_to").([]interface{})) {
 		if match, _ := regexp.MatchString(regexpNetworkAcl, matchTo); match == false {
-			return fmt.Errorf("SOLIDServer - Only network prefixes are supported for DNS view match_to parameter")
+			return diag.Errorf("Only network prefixes are supported for DNS view match_to parameter")
 		}
 		matchTos += matchTo + ";"
 	}
@@ -374,7 +338,7 @@ func resourcednsviewUpdate(d *schema.ResourceData, meta interface{}) error {
 		// Checking the answer
 		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
 			if oid, oidExist := buf[0]["ret_oid"].(string); oidExist {
-				log.Printf("[DEBUG] SOLIDServer - Updated DNS view (oid): %s\n", oid)
+				tflog.Debug(ctx, fmt.Sprintf("Updated DNS view (oid): %s\n", oid))
 				d.SetId(oid)
 
 				// Building forward mode and forward list
@@ -385,7 +349,7 @@ func resourcednsviewUpdate(d *schema.ResourceData, meta interface{}) error {
 
 				if d.Get("forward").(string) == "none" {
 					if fwdList != "" {
-						return fmt.Errorf("SOLIDServer - Error creating DNS view: %s (Forward mode set to 'none' but forwarders list is not empty).", strings.ToLower(d.Get("name").(string)))
+						return diag.Errorf("Error creating DNS view: %s (Forward mode set to 'none' but forwarders list is not empty).", strings.ToLower(d.Get("name").(string)))
 					}
 					dnsparamunset(d.Get("dnsserver").(string), oid, "forward", meta)
 					dnsparamset(d.Get("dnsserver").(string), oid, "forwarders", "", meta)
@@ -401,20 +365,20 @@ func resourcednsviewUpdate(d *schema.ResourceData, meta interface{}) error {
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
 				if errParam, errParamExist := buf[0]["parameters"].(string); errParamExist {
-					return fmt.Errorf("SOLIDServer - Unable to update DNS view: %s (%s - %s)", strings.ToLower(d.Get("name").(string)), errMsg, errParam)
+					return diag.Errorf("Unable to update DNS view: %s (%s - %s)", strings.ToLower(d.Get("name").(string)), errMsg, errParam)
 				}
-				return fmt.Errorf("SOLIDServer - Unable to update DNS view: %s (%s)", strings.ToLower(d.Get("name").(string)), errMsg)
+				return diag.Errorf("Unable to update DNS view: %s (%s)", strings.ToLower(d.Get("name").(string)), errMsg)
 			}
 		}
 
-		return fmt.Errorf("SOLIDServer - Unable to update DNS view: %s\n", strings.ToLower(d.Get("name").(string)))
+		return diag.Errorf("Unable to update DNS view: %s\n", strings.ToLower(d.Get("name").(string)))
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourcednsviewDelete(d *schema.ResourceData, meta interface{}) error {
+func resourcednsviewDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	for i := 0; i < 3; i++ {
@@ -432,7 +396,7 @@ func resourcednsviewDelete(d *schema.ResourceData, meta interface{}) error {
 			// Checking the answer
 			if resp.StatusCode == 200 || resp.StatusCode == 204 {
 				// Log deletion
-				log.Printf("[DEBUG] SOLIDServer - Deleted DNS view (oid): %s\n", d.Id())
+				tflog.Debug(ctx, fmt.Sprintf("Deleted DNS view (oid): %s\n", d.Id()))
 
 				// Unset local ID
 				d.SetId("")
@@ -443,24 +407,24 @@ func resourcednsviewDelete(d *schema.ResourceData, meta interface{}) error {
 				// Logging a failure
 				if len(buf) > 0 {
 					if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-						log.Printf("[DEBUG] SOLIDServer - Unable to delete DNS view: %s (%s)", strings.ToLower(d.Get("name").(string)), errMsg)
+						tflog.Debug(ctx, fmt.Sprintf("Unable to delete DNS view: %s (%s)", strings.ToLower(d.Get("name").(string)), errMsg))
 					}
 				} else {
-					log.Printf("[DEBUG] SOLIDServer - Unable to delete DNS view: %s", strings.ToLower(d.Get("name").(string)))
+					tflog.Debug(ctx, fmt.Sprintf("Unable to delete DNS view: %s", strings.ToLower(d.Get("name").(string))))
 				}
 				time.Sleep(time.Duration(8 * time.Second))
 			}
 		} else {
 			// Reporting a failure
-			return err
+			return diag.FromErr(err)
 		}
 	}
 
 	// Reporting a failure
-	return fmt.Errorf("SOLIDServer - Unable to delete DNS view: Too many unsuccessful deletion attempts")
+	return diag.Errorf("Unable to delete DNS view: Too many unsuccessful deletion attempts")
 }
 
-func resourcednsviewRead(d *schema.ResourceData, meta interface{}) error {
+func resourcednsviewRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -498,7 +462,7 @@ func resourcednsviewRead(d *schema.ResourceData, meta interface{}) error {
 					d.Set("forward", strings.ToLower(forward))
 				}
 			} else {
-				log.Printf("[DEBUG] SOLIDServer - Unable to DNS view's forward mode (oid): %s\n", d.Id())
+				tflog.Debug(ctx, fmt.Sprintf("Unable to DNS view's forward mode (oid): %s\n", d.Id()))
 				d.Set("forward", "none")
 			}
 
@@ -511,7 +475,7 @@ func resourcednsviewRead(d *schema.ResourceData, meta interface{}) error {
 					d.Set("forwarders", make([]string, 0))
 				}
 			} else {
-				log.Printf("[DEBUG] SOLIDServer - Unable to DNS view's forwarders list (oid): %s\n", d.Id())
+				tflog.Debug(ctx, fmt.Sprintf("Unable to DNS view's forwarders list (oid): %s\n", d.Id()))
 				d.Set("forwarders", make([]string, 0))
 			}
 
@@ -593,24 +557,24 @@ func resourcednsviewRead(d *schema.ResourceData, meta interface{}) error {
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
 				// Log the error
-				log.Printf("[DEBUG] SOLIDServer - Unable to find DNS view: %s (%s)\n", strings.ToLower(d.Get("name").(string)), errMsg)
+				tflog.Debug(ctx, fmt.Sprintf("Unable to find DNS view: %s (%s)\n", strings.ToLower(d.Get("name").(string)), errMsg))
 			}
 		} else {
 			// Log the error
-			log.Printf("[DEBUG] SOLIDServer - Unable to find DNS view (oid): %s\n", d.Id())
+			tflog.Debug(ctx, fmt.Sprintf("Unable to find DNS view (oid): %s\n", d.Id()))
 		}
 
 		// Do not unset the local ID to avoid inconsistency
 
 		// Reporting a failure
-		return fmt.Errorf("SOLIDServer - Unable to find DNS view: %s\n", strings.ToLower(d.Get("name").(string)))
+		return diag.Errorf("Unable to find DNS view: %s\n", strings.ToLower(d.Get("name").(string)))
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourcednsviewImportState(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+func resourcednsviewImportState(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -648,7 +612,7 @@ func resourcednsviewImportState(d *schema.ResourceData, meta interface{}) ([]*sc
 					d.Set("forward", strings.ToLower(forward))
 				}
 			} else {
-				log.Printf("[DEBUG] SOLIDServer - Unable to DNS view's forward mode (oid): %s\n", d.Id())
+				tflog.Debug(ctx, fmt.Sprintf("Unable to DNS view's forward mode (oid): %s\n", d.Id()))
 				d.Set("forward", "none")
 			}
 
@@ -661,7 +625,7 @@ func resourcednsviewImportState(d *schema.ResourceData, meta interface{}) ([]*sc
 					d.Set("forwarders", make([]string, 0))
 				}
 			} else {
-				log.Printf("[DEBUG] SOLIDServer - Unable to DNS view's forwarders list (oid): %s\n", d.Id())
+				tflog.Debug(ctx, fmt.Sprintf("Unable to DNS view's forwarders list (oid): %s\n", d.Id()))
 				d.Set("forwarders", make([]string, 0))
 			}
 
@@ -742,10 +706,10 @@ func resourcednsviewImportState(d *schema.ResourceData, meta interface{}) ([]*sc
 
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				log.Printf("[DEBUG] SOLIDServer - Unable to import DNS view (oid): %s (%s)\n", d.Id(), errMsg)
+				tflog.Debug(ctx, fmt.Sprintf("Unable to import DNS view (oid): %s (%s)\n", d.Id(), errMsg))
 			}
 		} else {
-			log.Printf("[DEBUG] SOLIDServer - Unable to find and import DNS view (oid): %s\n", d.Id())
+			tflog.Debug(ctx, fmt.Sprintf("Unable to find and import DNS view (oid): %s\n", d.Id()))
 		}
 
 		// Reporting a failure

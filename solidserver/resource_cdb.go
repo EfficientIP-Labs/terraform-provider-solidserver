@@ -1,22 +1,23 @@
 package solidserver
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"log"
 	"net/url"
 )
 
 func resourcecdb() *schema.Resource {
 	return &schema.Resource{
-		Create: resourcecdbCreate,
-		Read:   resourcecdbRead,
-		Update: resourcecdbUpdate,
-		Delete: resourcecdbDelete,
-		Exists: resourcecdbExists,
+		CreateContext: resourcecdbCreate,
+		ReadContext:   resourcecdbRead,
+		UpdateContext: resourcecdbUpdate,
+		DeleteContext: resourcecdbDelete,
 		Importer: &schema.ResourceImporter{
-			State: resourcecdbImportState,
+			StateContext: resourcecdbImportState,
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -100,44 +101,7 @@ func resourcecdb() *schema.Resource {
 	}
 }
 
-func resourcecdbExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	s := meta.(*SOLIDserver)
-
-	// Building parameters
-	parameters := url.Values{}
-	parameters.Add("custom_db_name_id", d.Id())
-
-	log.Printf("[DEBUG] Checking existence of Custom DB (oid): %s\n", d.Id())
-
-	// Sending read request
-	resp, body, err := s.Request("get", "rest/custom_db_name_info", &parameters)
-
-	if err == nil {
-		var buf [](map[string]interface{})
-		json.Unmarshal([]byte(body), &buf)
-
-		// Checking answer
-		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
-			return true, nil
-		}
-
-		if len(buf) > 0 {
-			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				log.Printf("[DEBUG] SOLIDServer - Unable to find Custom DB (oid): %s (%s)\n", d.Id(), errMsg)
-			}
-		} else {
-			log.Printf("[DEBUG] SOLIDServer - Unable to find Custom DB (oid): %s\n", d.Id())
-		}
-
-		// Unset local ID
-		d.SetId("")
-	}
-
-	// Reporting a failure
-	return false, err
-}
-
-func resourcecdbCreate(d *schema.ResourceData, meta interface{}) error {
+func resourcecdbCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -165,7 +129,7 @@ func resourcecdbCreate(d *schema.ResourceData, meta interface{}) error {
 		// Checking the answer
 		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
 			if oid, oidExist := buf[0]["ret_oid"].(string); oidExist {
-				log.Printf("[DEBUG] SOLIDServer - Created Custom DB (oid): %s\n", oid)
+				tflog.Debug(ctx, fmt.Sprintf("Created Custom DB (oid): %s\n", oid))
 				d.SetId(oid)
 				return nil
 			}
@@ -174,18 +138,18 @@ func resourcecdbCreate(d *schema.ResourceData, meta interface{}) error {
 		// Reporting a failure
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				return fmt.Errorf("SOLIDServer - Unable to create Custom DB: %s (%s)", d.Get("name").(string), errMsg)
+				return diag.Errorf("Unable to create Custom DB: %s (%s)", d.Get("name").(string), errMsg)
 			}
 		}
 
-		return fmt.Errorf("SOLIDServer - Unable to create Custom DB: %s\n", d.Get("name").(string))
+		return diag.Errorf("Unable to create Custom DB: %s\n", d.Get("name").(string))
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourcecdbUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourcecdbUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -214,7 +178,7 @@ func resourcecdbUpdate(d *schema.ResourceData, meta interface{}) error {
 		// Checking the answer
 		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
 			if oid, oidExist := buf[0]["ret_oid"].(string); oidExist {
-				log.Printf("[DEBUG] SOLIDServer - Updated Custom DB (oid): %s\n", oid)
+				tflog.Debug(ctx, fmt.Sprintf("Updated Custom DB (oid): %s\n", oid))
 				d.SetId(oid)
 				return nil
 			}
@@ -223,18 +187,18 @@ func resourcecdbUpdate(d *schema.ResourceData, meta interface{}) error {
 		// Reporting a failure
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				return fmt.Errorf("SOLIDServer - Unable to update Custom DB: %s (%s)", d.Get("name").(string), errMsg)
+				return diag.Errorf("Unable to update Custom DB: %s (%s)", d.Get("name").(string), errMsg)
 			}
 		}
 
-		return fmt.Errorf("SOLIDServer - Unable to update Custom DB: %s\n", d.Get("name").(string))
+		return diag.Errorf("Unable to update Custom DB: %s\n", d.Get("name").(string))
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourcecdbDelete(d *schema.ResourceData, meta interface{}) error {
+func resourcecdbDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -253,15 +217,15 @@ func resourcecdbDelete(d *schema.ResourceData, meta interface{}) error {
 			// Reporting a failure
 			if len(buf) > 0 {
 				if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-					return fmt.Errorf("SOLIDServer - Unable to delete Custom DB: %s (%s)", d.Get("name").(string), errMsg)
+					return diag.Errorf("Unable to delete Custom DB: %s (%s)", d.Get("name").(string), errMsg)
 				}
 			}
 
-			return fmt.Errorf("SOLIDServer - Unable to delete Custom DB: %s", d.Get("name").(string))
+			return diag.Errorf("Unable to delete Custom DB: %s", d.Get("name").(string))
 		}
 
 		// Log deletion
-		log.Printf("[DEBUG] SOLIDServer - Deleted Custom DB (oid): %s\n", d.Id())
+		tflog.Debug(ctx, fmt.Sprintf("Deleted Custom DB (oid): %s\n", d.Id()))
 
 		// Unset local ID
 		d.SetId("")
@@ -271,10 +235,10 @@ func resourcecdbDelete(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourcecdbRead(d *schema.ResourceData, meta interface{}) error {
+func resourcecdbRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -308,24 +272,24 @@ func resourcecdbRead(d *schema.ResourceData, meta interface{}) error {
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
 				// Log the error
-				log.Printf("[DEBUG] SOLIDServer - Unable to find Custom DB: %s (%s)\n", d.Get("name"), errMsg)
+				tflog.Debug(ctx, fmt.Sprintf("Unable to find Custom DB: %s (%s)\n", d.Get("name"), errMsg))
 			}
 		} else {
 			// Log the error
-			log.Printf("[DEBUG] SOLIDServer - Unable to find Custom DB (oid): %s\n", d.Id())
+			tflog.Debug(ctx, fmt.Sprintf("Unable to find Custom DB (oid): %s\n", d.Id()))
 		}
 
 		// Do not unset the local ID to avoid inconsistency
 
 		// Reporting a failure
-		return fmt.Errorf("SOLIDServer - Unable to find Custom DB: %s\n", d.Get("name").(string))
+		return diag.Errorf("Unable to find Custom DB: %s\n", d.Get("name").(string))
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourcecdbImportState(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+func resourcecdbImportState(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -358,10 +322,10 @@ func resourcecdbImportState(d *schema.ResourceData, meta interface{}) ([]*schema
 
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				log.Printf("[DEBUG] SOLIDServer - Unable to import Custom DB(oid): %s (%s)\n", d.Id(), errMsg)
+				tflog.Debug(ctx, fmt.Sprintf("Unable to import Custom DB(oid): %s (%s)\n", d.Id(), errMsg))
 			}
 		} else {
-			log.Printf("[DEBUG] SOLIDServer - Unable to find and import Custom DB (oid): %s\n", d.Id())
+			tflog.Debug(ctx, fmt.Sprintf("Unable to find and import Custom DB (oid): %s\n", d.Id()))
 		}
 
 		// Reporting a failure

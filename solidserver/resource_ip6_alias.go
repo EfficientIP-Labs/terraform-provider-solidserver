@@ -1,21 +1,22 @@
 package solidserver
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-	"log"
-	"net/url"
-
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+	"net/url"
 )
 
 func resourceip6alias() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceip6aliasCreate,
-		Read:   resourceip6aliasRead,
-		//Update: resourceip6aliasUpdate,
-		Delete: resourceip6aliasDelete,
+		CreateContext: resourceip6aliasCreate,
+		ReadContext:   resourceip6aliasRead,
+		//UpdateContext: resourceip6aliasUpdate,
+		DeleteContext: resourceip6aliasDelete,
 
 		Schema: map[string]*schema.Schema{
 			"space": {
@@ -49,20 +50,20 @@ func resourceip6alias() *schema.Resource {
 	}
 }
 
-func resourceip6aliasCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceip6aliasCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Gather required ID(s) from provided information
 	siteID, err := ipsiteidbyname(d.Get("space").(string), meta)
 	if err != nil {
 		// Reporting a failure
-		return err
+		return diag.FromErr(err)
 	}
 
 	addressID, err := ip6addressidbyip6(siteID, d.Get("address").(string), meta)
 	if err != nil {
 		// Reporting a failure
-		return err
+		return diag.FromErr(err)
 	}
 
 	// Building parameters
@@ -81,7 +82,7 @@ func resourceip6aliasCreate(d *schema.ResourceData, meta interface{}) error {
 		// Checking the answer
 		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
 			if oid, oidExist := buf[0]["ret_oid"].(string); oidExist {
-				log.Printf("[DEBUG] SOLIDServer - Created IPv6 alias (oid): %s\n", oid)
+				tflog.Debug(ctx, fmt.Sprintf("Created IPv6 alias (oid): %s\n", oid))
 				d.SetId(oid)
 
 				return nil
@@ -91,18 +92,18 @@ func resourceip6aliasCreate(d *schema.ResourceData, meta interface{}) error {
 		// Reporting a failure
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				return fmt.Errorf("SOLIDServer - Unable to create IPv6 alias: %s - %s associated to IPv6 address (OID): %s (%s)\n", d.Get("name").(string), d.Get("type"), addressID, errMsg)
+				return diag.Errorf("Unable to create IPv6 alias: %s - %s associated to IPv6 address (OID): %s (%s)\n", d.Get("name").(string), d.Get("type"), addressID, errMsg)
 			}
 		}
 
-		return fmt.Errorf("SOLIDServer - Unable to create IPv6 alias: %s - %s associated to IPv6 address (OID): %s\n", d.Get("name").(string), d.Get("type"), addressID)
+		return diag.Errorf("Unable to create IPv6 alias: %s - %s associated to IPv6 address (OID): %s\n", d.Get("name").(string), d.Get("type"), addressID)
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourceip6aliasDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceip6aliasDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -121,15 +122,15 @@ func resourceip6aliasDelete(d *schema.ResourceData, meta interface{}) error {
 			// Reporting a failure
 			if len(buf) > 0 {
 				if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-					return fmt.Errorf("SOLIDServer - Unable to delete IPv6 alias : %s - %s (%s)\n", d.Get("name"), d.Get("type"), errMsg)
+					return diag.Errorf("Unable to delete IPv6 alias : %s - %s (%s)\n", d.Get("name"), d.Get("type"), errMsg)
 				}
 			}
 
-			return fmt.Errorf("SOLIDServer - Unable to delete IPv6 alias : %s - %s\n", d.Get("name"), d.Get("type"))
+			return diag.Errorf("Unable to delete IPv6 alias : %s - %s\n", d.Get("name"), d.Get("type"))
 		}
 
 		// Log deletion
-		log.Printf("[DEBUG] SOLIDServer - Deleted IPv6 alias with oid: %s\n", d.Id())
+		tflog.Debug(ctx, fmt.Sprintf("Deleted IPv6 alias with oid: %s\n", d.Id()))
 
 		// Unset local ID
 		d.SetId("")
@@ -139,23 +140,23 @@ func resourceip6aliasDelete(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourceip6aliasRead(d *schema.ResourceData, meta interface{}) error {
+func resourceip6aliasRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Gather required ID(s) from provided information
 	siteID, err := ipsiteidbyname(d.Get("space").(string), meta)
 	if err != nil {
 		// Reporting a failure
-		return err
+		return diag.FromErr(err)
 	}
 
 	addressID, err := ip6addressidbyip6(siteID, d.Get("address").(string), meta)
 	if err != nil {
 		// Reporting a failure
-		return err
+		return diag.FromErr(err)
 	}
 
 	// Building parameters
@@ -181,19 +182,19 @@ func resourceip6aliasRead(d *schema.ResourceData, meta interface{}) error {
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
 				// Log the error
-				log.Printf("[DEBUG] SOLIDServer - Unable to find IPv6 alias: %s (%s)\n", d.Get("name"), errMsg)
+				tflog.Debug(ctx, fmt.Sprintf("Unable to find IPv6 alias: %s (%s)\n", d.Get("name"), errMsg))
 			}
 		} else {
 			// Log the error
-			log.Printf("[DEBUG] SOLIDServer - Unable to find IPv6 alias (oid): %s\n", d.Id())
+			tflog.Debug(ctx, fmt.Sprintf("Unable to find IPv6 alias (oid): %s\n", d.Id()))
 		}
 
 		// Do not unset the local ID to avoid inconsistency
 
 		// Reporting a failure
-		return fmt.Errorf("SOLIDServer - Unable to find IPv6 alias: %s\n", d.Get("name").(string))
+		return diag.Errorf("Unable to find IPv6 alias: %s\n", d.Get("name").(string))
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }

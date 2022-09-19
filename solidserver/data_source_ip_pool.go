@@ -1,17 +1,19 @@
 package solidserver
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"log"
 	"net/url"
 	"strconv"
 )
 
 func dataSourceippool() *schema.Resource {
 	return &schema.Resource{
-		Read: dataSourceippoolRead,
+		ReadContext: dataSourceippoolRead,
 
 		Schema: map[string]*schema.Schema{
 			"name": {
@@ -68,7 +70,7 @@ func dataSourceippool() *schema.Resource {
 	}
 }
 
-func dataSourceippoolRead(d *schema.ResourceData, meta interface{}) error {
+func dataSourceippoolRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 	d.SetId("")
 
@@ -119,17 +121,17 @@ func dataSourceippoolRead(d *schema.ResourceData, meta interface{}) error {
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
 				// Log the error
-				log.Printf("[DEBUG] SOLIDServer - Unable to read information from IP pool: %s (%s)\n", d.Get("name").(string), errMsg)
+				tflog.Debug(ctx, fmt.Sprintf("Unable to read information from IP pool: %s (%s)\n", d.Get("name").(string), errMsg))
 			}
 		} else {
 			// Log the error
-			log.Printf("[DEBUG] SOLIDServer - Unable to read information from IP pool: %s\n", d.Get("name").(string))
+			tflog.Debug(ctx, fmt.Sprintf("Unable to read information from IP pool: %s\n", d.Get("name").(string)))
 		}
 
 		// Reporting a failure
-		return fmt.Errorf("SOLIDServer - Unable to find IP pool: %s", d.Get("name").(string))
+		return diag.Errorf("Unable to find IP pool: %s", d.Get("name").(string))
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }

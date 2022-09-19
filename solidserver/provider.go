@@ -1,6 +1,8 @@
 package solidserver
 
 import (
+	"context"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"regexp"
@@ -101,13 +103,13 @@ func Provider() *schema.Provider {
 			"solidserver_cdb":              resourcecdb(),
 			"solidserver_cdb_data":         resourcecdbdata(),
 		},
-
-		ConfigureFunc: ProviderConfigure,
+		ConfigureContextFunc: ProviderConfigure,
 	}
 }
 
-func ProviderConfigure(d *schema.ResourceData) (interface{}, error) {
+func ProviderConfigure(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
 	s, err := NewSOLIDserver(
+		ctx,
 		d.Get("host").(string),
 		d.Get("username").(string),
 		d.Get("password").(string),
@@ -115,6 +117,5 @@ func ProviderConfigure(d *schema.ResourceData) (interface{}, error) {
 		d.Get("additional_trust_certs_file").(string),
 		d.Get("solidserverversion").(string),
 	)
-
 	return s, err
 }

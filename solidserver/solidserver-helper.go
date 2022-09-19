@@ -3,9 +3,9 @@ package solidserver
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"inet.af/netaddr"
-	"log"
 	"math/big"
 	"net/url"
 	"sort"
@@ -392,7 +392,7 @@ func hostdevidbyname(hostdevName string, meta interface{}) (string, error) {
 		}
 	}
 
-	log.Printf("[DEBUG] SOLIDServer - Unable to find device: %s\n", hostdevName)
+	tflog.Debug(s.Ctx, fmt.Sprintf("Unable to find device: %s\n", hostdevName))
 
 	return "", err
 }
@@ -424,7 +424,7 @@ func ipaddressfindfree(subnetID string, poolID string, meta interface{}) ([]stri
 
 			for i := 0; i < len(buf); i++ {
 				if addr, addrExist := buf[i]["hostaddr"].(string); addrExist {
-					log.Printf("[DEBUG] SOLIDServer - Suggested IP address: %s\n", addr)
+					tflog.Debug(s.Ctx, fmt.Sprintf("Suggested IP address: %s\n", addr))
 					addresses = append(addresses, addr)
 				}
 			}
@@ -432,7 +432,7 @@ func ipaddressfindfree(subnetID string, poolID string, meta interface{}) ([]stri
 		}
 	}
 
-	log.Printf("[DEBUG] SOLIDServer - Unable to find a free IP address in subnet (oid): %s\n", subnetID)
+	tflog.Debug(s.Ctx, fmt.Sprintf("Unable to find a free IP address in subnet (oid): %s\n", subnetID))
 
 	return []string{}, err
 }
@@ -464,7 +464,7 @@ func ip6addressfindfree(subnetID string, poolID string, meta interface{}) ([]str
 
 			for i := 0; i < len(buf); i++ {
 				if addr, addrExist := buf[i]["hostaddr6"].(string); addrExist {
-					log.Printf("[DEBUG] SOLIDServer - Suggested IP address: %s\n", addr)
+					tflog.Debug(s.Ctx, fmt.Sprintf("Suggested IP address: %s\n", addr))
 					addresses = append(addresses, addr)
 				}
 			}
@@ -472,7 +472,7 @@ func ip6addressfindfree(subnetID string, poolID string, meta interface{}) ([]str
 		}
 	}
 
-	log.Printf("[DEBUG] SOLIDServer - Unable to find a free IPv6 address in subnet (oid): %s\n", subnetID)
+	tflog.Debug(s.Ctx, fmt.Sprintf("Unable to find a free IPv6 address in subnet (oid): %s\n", subnetID))
 
 	return []string{}, err
 }
@@ -506,7 +506,7 @@ func vlanidfindfree(vlmdomainName string, meta interface{}) ([]string, error) {
 			for i := range buf {
 				if s.Version < 700 {
 					if vnID, vnIDExist := buf[i]["vlmvlan_vlan_id"].(string); vnIDExist {
-						log.Printf("[DEBUG] SOLIDServer - Suggested vlan ID: %s\n", vnID)
+						tflog.Debug(s.Ctx, fmt.Sprintf("Suggested vlan ID: %s\n", vnID))
 						vnIDs = append(vnIDs, vnID)
 					}
 				} else {
@@ -517,7 +517,7 @@ func vlanidfindfree(vlmdomainName string, meta interface{}) ([]string, error) {
 
 							j := 0
 							for vnID < maxVnID && j < 8 {
-								log.Printf("[DEBUG] SOLIDServer - Suggested vlan ID: %d\n", vnID)
+								tflog.Debug(s.Ctx, fmt.Sprintf("Suggested vlan ID: %d\n", vnID))
 								vnIDs = append(vnIDs, strconv.Itoa(vnID))
 								vnID++
 								j++
@@ -530,7 +530,7 @@ func vlanidfindfree(vlmdomainName string, meta interface{}) ([]string, error) {
 		}
 	}
 
-	log.Printf("[DEBUG] SOLIDServer - Unable to find a free vlan ID in vlan domain: %s\n", vlmdomainName)
+	tflog.Debug(s.Ctx, fmt.Sprintf("Unable to find a free vlan ID in vlan domain: %s\n", vlmdomainName))
 
 	return []string{}, err
 }
@@ -559,7 +559,7 @@ func ipsiteidbyname(siteName string, meta interface{}) (string, error) {
 		}
 	}
 
-	log.Printf("[DEBUG] SOLIDServer - Unable to find IP space: %s\n", siteName)
+	tflog.Debug(s.Ctx, fmt.Sprintf("Unable to find IP space: %s\n", siteName))
 
 	return "", err
 }
@@ -588,7 +588,7 @@ func vlandomainidbyname(vlmdomainName string, meta interface{}) (string, error) 
 		}
 	}
 
-	log.Printf("[DEBUG] SOLIDServer - Unable to find vlan domain: %s\n", vlmdomainName)
+	tflog.Debug(s.Ctx, fmt.Sprintf("Unable to find vlan domain: %s\n", vlmdomainName))
 
 	return "", err
 }
@@ -626,7 +626,7 @@ func ipsubnetidbyname(siteID string, subnetName string, terminal bool, meta inte
 		}
 	}
 
-	log.Printf("[DEBUG] SOLIDServer - Unable to find IP subnet: %s\n", subnetName)
+	tflog.Debug(s.Ctx, fmt.Sprintf("Unable to find IP subnet: %s\n", subnetName))
 
 	return "", err
 }
@@ -655,7 +655,7 @@ func ippoolidbyname(siteID string, poolName string, subnetName string, meta inte
 		}
 	}
 
-	log.Printf("[DEBUG] SOLIDServer - Unable to find IP pool: %s\n", poolName)
+	tflog.Debug(s.Ctx, fmt.Sprintf("Unable to find IP pool: %s\n", poolName))
 
 	return "", err
 }
@@ -705,7 +705,7 @@ func ippoolinfobyname(siteID string, poolName string, subnetName string, meta in
 		}
 	}
 
-	log.Printf("[DEBUG] SOLIDServer - Unable to find IP pool: %s\n", poolName)
+	tflog.Debug(s.Ctx, fmt.Sprintf("Unable to find IP pool: %s\n", poolName))
 
 	return nil, err
 }
@@ -775,7 +775,7 @@ func ipsubnetinfobyname(siteID string, subnetName string, terminal bool, meta in
 		return nil, fmt.Errorf("SOLIDServer - Unable to find IP subnet: %s\n", subnetName)
 	}
 
-	log.Printf("[DEBUG] SOLIDServer - Unable to find IP subnet: %s\n", subnetName)
+	tflog.Debug(s.Ctx, fmt.Sprintf("Unable to find IP subnet: %s\n", subnetName))
 
 	return nil, err
 }
@@ -813,7 +813,7 @@ func ip6subnetidbyname(siteID string, subnetName string, terminal bool, meta int
 		}
 	}
 
-	log.Printf("[DEBUG] SOLIDServer - Unable to find IPv6 subnet: %s\n", subnetName)
+	tflog.Debug(s.Ctx, fmt.Sprintf("Unable to find IPv6 subnet: %s\n", subnetName))
 
 	return "", err
 }
@@ -842,7 +842,7 @@ func ip6poolidbyname(siteID string, poolName string, subnetName string, meta int
 		}
 	}
 
-	log.Printf("[DEBUG] SOLIDServer - Unable to find IPv6 pool: %s\n", poolName)
+	tflog.Debug(s.Ctx, fmt.Sprintf("Unable to find IPv6 pool: %s\n", poolName))
 
 	return "", err
 }
@@ -892,7 +892,7 @@ func ip6poolinfobyname(siteID string, poolName string, subnetName string, meta i
 		}
 	}
 
-	log.Printf("[DEBUG] SOLIDServer - Unable to find IPv6 pool: %s\n", poolName)
+	tflog.Debug(s.Ctx, fmt.Sprintf("Unable to find IPv6 pool: %s\n", poolName))
 
 	return nil, err
 }
@@ -961,7 +961,7 @@ func ip6subnetinfobyname(siteID string, subnetName string, terminal bool, meta i
 		return nil, fmt.Errorf("SOLIDServer - Unable to find IPv6 subnet: %s\n", subnetName)
 	}
 
-	log.Printf("[DEBUG] SOLIDServer - Unable to find IPv6 subnet: %s\n", subnetName)
+	tflog.Debug(s.Ctx, fmt.Sprintf("Unable to find IPv6 subnet: %s\n", subnetName))
 
 	return nil, err
 }
@@ -990,7 +990,7 @@ func ipaddressidbyip(siteID string, ipAddress string, meta interface{}) (string,
 		}
 	}
 
-	log.Printf("[DEBUG] SOLIDServer - Unable to find IP address: %s\n", ipAddress)
+	tflog.Debug(s.Ctx, fmt.Sprintf("Unable to find IP address: %s\n", ipAddress))
 
 	return "", err
 }
@@ -1019,7 +1019,7 @@ func ip6addressidbyip6(siteID string, ipAddress string, meta interface{}) (strin
 		}
 	}
 
-	log.Printf("[DEBUG] SOLIDServer - Unable to find IPv6 address: %s\n", ipAddress)
+	tflog.Debug(s.Ctx, fmt.Sprintf("Unable to find IPv6 address: %s\n", ipAddress))
 
 	return "", err
 }
@@ -1049,7 +1049,7 @@ func ipaliasidbyinfo(addressID string, aliasName string, ipNameType string, meta
 		}
 	}
 
-	log.Printf("[DEBUG] SOLIDServer - Unable to find IP alias: %s - %s associated with IP address ID %s\n", aliasName, ipNameType, addressID)
+	tflog.Debug(s.Ctx, fmt.Sprintf("Unable to find IP alias: %s - %s associated with IP address ID %s\n", aliasName, ipNameType, addressID))
 
 	return "", err
 }
@@ -1088,7 +1088,7 @@ func ipsubnetfindbysize(siteID string, blockID string, requestedIP string, prefi
 
 			for i := 0; i < len(buf); i++ {
 				if hexaddr, hexaddr_exist := buf[i]["start_ip_addr"].(string); hexaddr_exist {
-					log.Printf("[DEBUG] SOLIDServer - Suggested IP subnet address: %s\n", hexiptoip(hexaddr))
+					tflog.Debug(s.Ctx, fmt.Sprintf("Suggested IP subnet address: %s\n", hexiptoip(hexaddr)))
 					subnetAddresses = append(subnetAddresses, hexaddr)
 				}
 			}
@@ -1096,7 +1096,7 @@ func ipsubnetfindbysize(siteID string, blockID string, requestedIP string, prefi
 		}
 	}
 
-	log.Printf("[DEBUG] SOLIDServer - Unable to find a free IP subnet in space (oid): %s, block (oid): %s, size: %s\n", siteID, blockID, strconv.Itoa(prefixSize))
+	tflog.Debug(s.Ctx, fmt.Sprintf("Unable to find a free IP subnet in space (oid): %s, block (oid): %s, size: %s\n", siteID, blockID, strconv.Itoa(prefixSize)))
 
 	return []string{}, err
 }
@@ -1135,7 +1135,7 @@ func ip6subnetfindbysize(siteID string, blockID string, requestedIP string, pref
 
 			for i := 0; i < len(buf); i++ {
 				if hexaddr, hexaddr_exist := buf[i]["start_ip6_addr"].(string); hexaddr_exist {
-					log.Printf("[DEBUG] SOLIDServer - Suggested IPv6 subnet address: %s\n", hexip6toip6(hexaddr))
+					tflog.Debug(s.Ctx, fmt.Sprintf("Suggested IPv6 subnet address: %s\n", hexip6toip6(hexaddr)))
 					subnetAddresses = append(subnetAddresses, hexaddr)
 				}
 			}
@@ -1143,7 +1143,7 @@ func ip6subnetfindbysize(siteID string, blockID string, requestedIP string, pref
 		}
 	}
 
-	log.Printf("[DEBUG] SOLIDServer - Unable to find a free IPv6 subnet in space (oid): %s, block (oid): %s, size: %s\n", siteID, blockID, strconv.Itoa(prefixSize))
+	tflog.Debug(s.Ctx, fmt.Sprintf("Unable to find a free IPv6 subnet in space (oid): %s, block (oid): %s, size: %s\n", siteID, blockID, strconv.Itoa(prefixSize)))
 
 	return []string{}, err
 }
@@ -1172,7 +1172,7 @@ func cdbnameidbyname(name string, meta interface{}) (string, error) {
 		}
 	}
 
-	log.Printf("[DEBUG] SOLIDServer - Unable to find Custom DB: %s\n", name)
+	tflog.Debug(s.Ctx, fmt.Sprintf("Unable to find Custom DB: %s\n", name))
 
 	return "", err
 }
@@ -1203,10 +1203,10 @@ func dnssmartmembersupdate(smartName string, smartMembersRole string, meta inter
 		// Log the error
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				log.Printf("[DEBUG] SOLIDServer - Unable to update members list of the DNS SMART: %s (%s)\n", smartName, errMsg)
+				tflog.Debug(s.Ctx, fmt.Sprintf("Unable to update members list of the DNS SMART: %s (%s)\n", smartName, errMsg))
 			}
 		} else {
-			log.Printf("[DEBUG] SOLIDServer - Unable to update members list of the DNS SMART: %s\n", smartName)
+			tflog.Debug(s.Ctx, fmt.Sprintf("Unable to update members list of the DNS SMART: %s\n", smartName))
 		}
 	}
 
@@ -1240,10 +1240,10 @@ func dnsserverstatus(serverID string, meta interface{}) string {
 		// Log the error
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				log.Printf("[DEBUG] SOLIDServer - Unable to retrieve DNS server status: %s (%s)\n", serverID, errMsg)
+				tflog.Debug(s.Ctx, fmt.Sprintf("Unable to retrieve DNS server status: %s (%s)\n", serverID, errMsg))
 			}
 		} else {
-			log.Printf("[DEBUG] SOLIDServer - Unable to retrieve DNS server status: %s\n", serverID)
+			tflog.Debug(s.Ctx, fmt.Sprintf("Unable to retrieve DNS server status: %s\n", serverID))
 		}
 	}
 
@@ -1279,10 +1279,10 @@ func dnsserverpendingdeletions(serverID string, meta interface{}) int {
 		// Log the error
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				log.Printf("[DEBUG] SOLIDServer - Unable to retrieve DNS server pending operations: %s (%s)\n", serverID, errMsg)
+				tflog.Debug(s.Ctx, fmt.Sprintf("Unable to retrieve DNS server pending operations: %s (%s)\n", serverID, errMsg))
 			}
 		} else {
-			log.Printf("[DEBUG] SOLIDServer - Unable to retrieve DNS server pending operations: %s\n", serverID)
+			tflog.Debug(s.Ctx, fmt.Sprintf("Unable to retrieve DNS server pending operations: %s\n", serverID))
 		}
 	}
 
@@ -1309,10 +1309,10 @@ func dnsserverpendingdeletions(serverID string, meta interface{}) int {
 		// Log the error
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				log.Printf("[DEBUG] SOLIDServer - Unable to retrieve DNS server pending operations: %s (%s)\n", serverID, errMsg)
+				tflog.Debug(s.Ctx, fmt.Sprintf("Unable to retrieve DNS server pending operations: %s (%s)\n", serverID, errMsg))
 			}
 		} else {
-			log.Printf("[DEBUG] SOLIDServer - Unable to retrieve DNS server pending operations: %s\n", serverID)
+			tflog.Debug(s.Ctx, fmt.Sprintf("Unable to retrieve DNS server pending operations: %s\n", serverID))
 		}
 	}
 
@@ -1354,10 +1354,10 @@ func dnsparamset(serverName string, viewID string, paramKey string, paramValue s
 		// Log the error
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				log.Printf("[DEBUG] SOLIDServer - Unable to set DNS server or view parameter: %s on %s (%s)\n", paramKey, serverName, errMsg)
+				tflog.Debug(s.Ctx, fmt.Sprintf("Unable to set DNS server or view parameter: %s on %s (%s)\n", paramKey, serverName, errMsg))
 			}
 		} else {
-			log.Printf("[DEBUG] SOLIDServer - Unable to set DNS server or view parameter: %s on %s\n", paramKey, serverName)
+			tflog.Debug(s.Ctx, fmt.Sprintf("Unable to set DNS server or view parameter: %s on %s\n", paramKey, serverName))
 		}
 	}
 
@@ -1398,10 +1398,10 @@ func dnsparamunset(serverName string, viewID string, paramKey string, meta inter
 		// Log the error
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				log.Printf("[DEBUG] SOLIDServer - Unable to unset DNS server or view parameter: %s on %s (%s)\n", paramKey, serverName, errMsg)
+				tflog.Debug(s.Ctx, fmt.Sprintf("Unable to unset DNS server or view parameter: %s on %s (%s)\n", paramKey, serverName, errMsg))
 			}
 		} else {
-			log.Printf("[DEBUG] SOLIDServer - Unable to unset DNS server or view parameter: %s on %s\n", paramKey, serverName)
+			tflog.Debug(s.Ctx, fmt.Sprintf("Unable to unset DNS server or view parameter: %s on %s\n", paramKey, serverName))
 		}
 	}
 
@@ -1444,7 +1444,7 @@ func dnsparamget(serverName string, viewID string, paramKey string, meta interfa
 		}
 	}
 
-	log.Printf("[DEBUG] SOLIDServer - Unable to find DNS Param Key: %s\n", paramKey)
+	tflog.Debug(s.Ctx, fmt.Sprintf("Unable to find DNS Param Key: %s\n", paramKey))
 
 	return "", err
 }
@@ -1512,10 +1512,10 @@ func dnsaddtosmart(smartName string, serverName string, serverRole string, meta 
 				// Log the error
 				if len(buf) > 0 {
 					if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-						log.Printf("[DEBUG] SOLIDServer - Unable to retrieve members list of the DNS SMART: %s (%s)\n", smartName, errMsg)
+						tflog.Debug(s.Ctx, fmt.Sprintf("Unable to retrieve members list of the DNS SMART: %s (%s)\n", smartName, errMsg))
 					}
 				} else {
-					log.Printf("[DEBUG] SOLIDServer - Unable to retrieve members list of the DNS SMART: %s\n", smartName)
+					tflog.Debug(s.Ctx, fmt.Sprintf("Unable to retrieve members list of the DNS SMART: %s\n", smartName))
 				}
 			}
 
@@ -1525,10 +1525,10 @@ func dnsaddtosmart(smartName string, serverName string, serverRole string, meta 
 		// Log the error
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				log.Printf("[DEBUG] SOLIDServer - Unable to update the member list of the DNS SMART: %s (%s)\n", smartName, errMsg)
+				tflog.Debug(s.Ctx, fmt.Sprintf("Unable to update the member list of the DNS SMART: %s (%s)\n", smartName, errMsg))
 			}
 		} else {
-			log.Printf("[DEBUG] SOLIDServer - Unable to update the member list of the DNS SMART: %s\n", smartName)
+			tflog.Debug(s.Ctx, fmt.Sprintf("Unable to update the member list of the DNS SMART: %s\n", smartName))
 		}
 	}
 
@@ -1596,10 +1596,10 @@ func dnsdeletefromsmart(smartName string, serverName string, meta interface{}) b
 				// Log the error
 				if len(buf) > 0 {
 					if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-						log.Printf("[DEBUG] SOLIDServer - Unable to retrieve members list of the DNS SMART: %s (%s)\n", smartName, errMsg)
+						tflog.Debug(s.Ctx, fmt.Sprintf("Unable to retrieve members list of the DNS SMART: %s (%s)\n", smartName, errMsg))
 					}
 				} else {
-					log.Printf("[DEBUG] SOLIDServer - Unable to retrieve members list of the DNS SMART: %s\n", smartName)
+					tflog.Debug(s.Ctx, fmt.Sprintf("Unable to retrieve members list of the DNS SMART: %s\n", smartName))
 				}
 			}
 
@@ -1609,10 +1609,10 @@ func dnsdeletefromsmart(smartName string, serverName string, meta interface{}) b
 		// Log the error
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				log.Printf("[DEBUG] SOLIDServer - Unable to update the member list of the DNS SMART: %s (%s)\n", smartName, errMsg)
+				tflog.Debug(s.Ctx, fmt.Sprintf("Unable to update the member list of the DNS SMART: %s (%s)\n", smartName, errMsg))
 			}
 		} else {
-			log.Printf("[DEBUG] SOLIDServer - Unable to update the member list of the DNS SMART: %s\n", smartName)
+			tflog.Debug(s.Ctx, fmt.Sprintf("Unable to update the member list of the DNS SMART: %s\n", smartName))
 		}
 	}
 

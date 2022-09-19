@@ -1,26 +1,26 @@
 package solidserver
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"net/url"
 	"strconv"
 	"strings"
-
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
 
 func resourceapplicationnode() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceapplicationnodeCreate,
-		Read:   resourceapplicationnodeRead,
-		Update: resourceapplicationnodeUpdate,
-		Delete: resourceapplicationnodeDelete,
-		Exists: resourceapplicationnodeExists,
+		CreateContext: resourceapplicationnodeCreate,
+		ReadContext:   resourceapplicationnodeRead,
+		UpdateContext: resourceapplicationnodeUpdate,
+		DeleteContext: resourceapplicationnodeDelete,
 		Importer: &schema.ResourceImporter{
-			State: resourceapplicationnodeImportState,
+			StateContext: resourceapplicationnodeImportState,
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -218,49 +218,7 @@ func healcheckparamsfromstring(healthCheck string, parameters string) interface{
 	}
 }
 
-func resourceapplicationnodeExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	s := meta.(*SOLIDserver)
-
-	// Building parameters
-	parameters := url.Values{}
-	parameters.Add("appnode_id", d.Id())
-
-	if s.Version < 710 {
-		// Reporting a failure
-		return false, fmt.Errorf("SOLIDServer - Object not supported in this SOLIDserver version")
-	}
-
-	log.Printf("[DEBUG] Checking existence of application node (oid): %s\n", d.Id())
-
-	// Sending read request
-	resp, body, err := s.Request("get", "rest/app_node_info", &parameters)
-
-	if err == nil {
-		var buf [](map[string]interface{})
-		json.Unmarshal([]byte(body), &buf)
-
-		// Checking answer
-		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
-			return true, nil
-		}
-
-		if len(buf) > 0 {
-			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				log.Printf("[DEBUG] SOLIDServer - Unable to find application node (oid): %s (%s)\n", d.Id(), errMsg)
-			}
-		} else {
-			log.Printf("[DEBUG] SOLIDServer - Unable to find application node (oid): %s\n", d.Id())
-		}
-
-		// Unset local ID
-		d.SetId("")
-	}
-
-	// Reporting a failure
-	return false, err
-}
-
-func resourceapplicationnodeCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceapplicationnodeCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -281,7 +239,7 @@ func resourceapplicationnodeCreate(d *schema.ResourceData, meta interface{}) err
 
 	if s.Version < 710 {
 		// Reporting a failure
-		return fmt.Errorf("SOLIDServer - Object not supported in this SOLIDserver version")
+		return diag.Errorf("Object not supported in this SOLIDserver version")
 	}
 
 	// Sending creation request
@@ -294,7 +252,7 @@ func resourceapplicationnodeCreate(d *schema.ResourceData, meta interface{}) err
 		// Checking the answer
 		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
 			if oid, oidExist := buf[0]["ret_oid"].(string); oidExist {
-				log.Printf("[DEBUG] SOLIDServer - Created application node (oid): %s\n", oid)
+				tflog.Debug(ctx, fmt.Sprintf("Created application node (oid): %s\n", oid))
 				d.SetId(oid)
 				return nil
 			}
@@ -303,18 +261,18 @@ func resourceapplicationnodeCreate(d *schema.ResourceData, meta interface{}) err
 		// Reporting a failure
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				return fmt.Errorf("SOLIDServer - Unable to create application node: %s (%s)", d.Get("name").(string), errMsg)
+				return diag.Errorf("Unable to create application node: %s (%s)", d.Get("name").(string), errMsg)
 			}
 		}
 
-		return fmt.Errorf("SOLIDServer - Unable to create application node: %s\n", d.Get("name").(string))
+		return diag.Errorf("Unable to create application node: %s\n", d.Get("name").(string))
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourceapplicationnodeUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceapplicationnodeUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -336,7 +294,7 @@ func resourceapplicationnodeUpdate(d *schema.ResourceData, meta interface{}) err
 
 	if s.Version < 710 {
 		// Reporting a failure
-		return fmt.Errorf("SOLIDServer - Object not supported in this SOLIDserver version")
+		return diag.Errorf("Object not supported in this SOLIDserver version")
 	}
 
 	// Sending the update request
@@ -349,7 +307,7 @@ func resourceapplicationnodeUpdate(d *schema.ResourceData, meta interface{}) err
 		// Checking the answer
 		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
 			if oid, oidExist := buf[0]["ret_oid"].(string); oidExist {
-				log.Printf("[DEBUG] SOLIDServer - Updated application node (oid): %s\n", oid)
+				tflog.Debug(ctx, fmt.Sprintf("Updated application node (oid): %s\n", oid))
 				d.SetId(oid)
 				return nil
 			}
@@ -358,18 +316,18 @@ func resourceapplicationnodeUpdate(d *schema.ResourceData, meta interface{}) err
 		// Reporting a failure
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				return fmt.Errorf("SOLIDServer - Unable to update application node: %s (%s)", d.Get("name").(string), errMsg)
+				return diag.Errorf("Unable to update application node: %s (%s)", d.Get("name").(string), errMsg)
 			}
 		}
 
-		return fmt.Errorf("SOLIDServer - Unable to update application node: %s\n", d.Get("name").(string))
+		return diag.Errorf("Unable to update application node: %s\n", d.Get("name").(string))
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourceapplicationnodeDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceapplicationnodeDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -378,7 +336,7 @@ func resourceapplicationnodeDelete(d *schema.ResourceData, meta interface{}) err
 
 	if s.Version < 710 {
 		// Reporting a failure
-		return fmt.Errorf("SOLIDServer - Object not supported in this SOLIDserver version")
+		return diag.Errorf("Object not supported in this SOLIDserver version")
 	}
 
 	// Sending the deletion request
@@ -393,15 +351,15 @@ func resourceapplicationnodeDelete(d *schema.ResourceData, meta interface{}) err
 			// Reporting a failure
 			if len(buf) > 0 {
 				if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-					return fmt.Errorf("SOLIDServer - Unable to delete application node: %s (%s)", d.Get("name").(string), errMsg)
+					return diag.Errorf("Unable to delete application node: %s (%s)", d.Get("name").(string), errMsg)
 				}
 			}
 
-			return fmt.Errorf("SOLIDServer - Unable to delete application node: %s", d.Get("name").(string))
+			return diag.Errorf("Unable to delete application node: %s", d.Get("name").(string))
 		}
 
 		// Log deletion
-		log.Printf("[DEBUG] SOLIDServer - Deleted application (oid) node: %s\n", d.Id())
+		tflog.Debug(ctx, fmt.Sprintf("Deleted application (oid) node: %s\n", d.Id()))
 
 		// Unset local ID
 		d.SetId("")
@@ -411,10 +369,10 @@ func resourceapplicationnodeDelete(d *schema.ResourceData, meta interface{}) err
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourceapplicationnodeRead(d *schema.ResourceData, meta interface{}) error {
+func resourceapplicationnodeRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -423,7 +381,7 @@ func resourceapplicationnodeRead(d *schema.ResourceData, meta interface{}) error
 
 	if s.Version < 710 {
 		// Reporting a failure
-		return fmt.Errorf("SOLIDServer - Object not supported in this SOLIDserver version")
+		return diag.Errorf("Object not supported in this SOLIDserver version")
 	}
 
 	// Sending the read request
@@ -445,7 +403,7 @@ func resourceapplicationnodeRead(d *schema.ResourceData, meta interface{}) error
 			} else if ip6AddrExist && ip6Addr != "#" {
 				d.Set("address", hexip6toip6(ip6Addr))
 			} else {
-				log.Printf("[DEBUG] SOLIDServer - Error confilcting addressing IPv4/IPv6 on application node: %s\n", d.Get("name"))
+				tflog.Debug(ctx, fmt.Sprintf("Error confilcting addressing IPv4/IPv6 on application node: %s\n", d.Get("name")))
 			}
 
 			d.Set("application", buf[0]["appapplication_name"].(string))
@@ -477,24 +435,24 @@ func resourceapplicationnodeRead(d *schema.ResourceData, meta interface{}) error
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
 				// Log the error
-				log.Printf("[DEBUG] SOLIDServer - Unable to find application node: %s (%s)\n", d.Get("name"), errMsg)
+				tflog.Debug(ctx, fmt.Sprintf("Unable to find application node: %s (%s)\n", d.Get("name"), errMsg))
 			}
 		} else {
 			// Log the error
-			log.Printf("[DEBUG] SOLIDServer - Unable to find application node (oid): %s\n", d.Id())
+			tflog.Debug(ctx, fmt.Sprintf("Unable to find application node (oid): %s\n", d.Id()))
 		}
 
 		// Do not unset the local ID to avoid inconsistency
 
 		// Reporting a failure
-		return fmt.Errorf("SOLIDServer - Unable to find application node: %s\n", d.Get("name").(string))
+		return diag.Errorf("Unable to find application node: %s\n", d.Get("name").(string))
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourceapplicationnodeImportState(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+func resourceapplicationnodeImportState(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -525,7 +483,7 @@ func resourceapplicationnodeImportState(d *schema.ResourceData, meta interface{}
 			} else if ip6AddrExist && ip6Addr != "#" {
 				d.Set("address", hexip6toip6(ip6Addr))
 			} else {
-				log.Printf("[DEBUG] SOLIDServer - Error confilcting addressing IPv4/IPv6 on application node: %s\n", d.Get("name"))
+				tflog.Debug(ctx, fmt.Sprintf("Error confilcting addressing IPv4/IPv6 on application node: %s\n", d.Get("name")))
 			}
 
 			d.Set("application", buf[0]["appapplication_name"].(string))
@@ -556,10 +514,10 @@ func resourceapplicationnodeImportState(d *schema.ResourceData, meta interface{}
 
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				log.Printf("[DEBUG] SOLIDServer - Unable to import application node (oid): %s (%s)\n", d.Id(), errMsg)
+				tflog.Debug(ctx, fmt.Sprintf("Unable to import application node (oid): %s (%s)\n", d.Id(), errMsg))
 			}
 		} else {
-			log.Printf("[DEBUG] SOLIDServer - Unable to find and import application node (oid): %s\n", d.Id())
+			tflog.Debug(ctx, fmt.Sprintf("Unable to find and import application node (oid): %s\n", d.Id()))
 		}
 
 		// Reporting a failure

@@ -1,23 +1,24 @@
 package solidserver
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"log"
 	"net/url"
 	// "strconv"
 )
 
 func resourceuser() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceuserCreate,
-		Read:   resourceuserRead,
-		Update: resourceuserUpdate,
-		Delete: resourceuserDelete,
-		Exists: resourceuserExists,
+		CreateContext: resourceuserCreate,
+		ReadContext:   resourceuserRead,
+		UpdateContext: resourceuserUpdate,
+		DeleteContext: resourceuserDelete,
 		Importer: &schema.ResourceImporter{
-			State: resourceuserImportState,
+			StateContext: resourceuserImportState,
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -84,7 +85,7 @@ func resourceuser() *schema.Resource {
 	}
 }
 
-func _addUserToGroup(d *schema.ResourceData, meta interface{}, group string) error {
+func _addUserToGroup(ctx context.Context, d *schema.ResourceData, meta interface{}, group string) error {
 	s := meta.(*SOLIDserver)
 
 	parameters := url.Values{}
@@ -93,7 +94,7 @@ func _addUserToGroup(d *schema.ResourceData, meta interface{}, group string) err
 	// parameters.Add("usr_login", d.Get("login").(string))
 	parameters.Add("usr_id", d.Id())
 
-	log.Printf("[DEBUG] SOLIDServer - Adding user into group %s\n", parameters)
+	tflog.Debug(ctx, fmt.Sprintf("Adding user into group %s\n", parameters))
 
 	// Sending creation request of the user
 	resp, body, err := s.Request("post", "rest/group_user_add", &parameters)
@@ -103,22 +104,22 @@ func _addUserToGroup(d *schema.ResourceData, meta interface{}, group string) err
 
 		// Checking the answer
 		if resp.StatusCode == 204 || (resp.StatusCode == 400 && len(buf) == 0) {
-			log.Printf("[DEBUG] SOLIDServer - User added to group %s\n", group)
+			tflog.Debug(ctx, fmt.Sprintf("User added to group %s\n", group))
 			return nil
 		}
 	}
 
-	return fmt.Errorf("SOLIDServer - Unable to add user %s to group %s\n", d.Get("login").(string), group)
+	return fmt.Errorf("Unable to add user %s to group %s\n", d.Get("login").(string), group)
 }
 
-func _delUserFromGroup(d *schema.ResourceData, meta interface{}, group string) error {
+func _delUserFromGroup(ctx context.Context, d *schema.ResourceData, meta interface{}, group string) error {
 	s := meta.(*SOLIDserver)
 
 	parameters := url.Values{}
 	parameters.Add("grp_name", group)
 	parameters.Add("usr_login", d.Get("login").(string))
 
-	log.Printf("[DEBUG] SOLIDServer - Removing user from group %s\n", parameters)
+	tflog.Debug(ctx, fmt.Sprintf("Removing user from group %s\n", parameters))
 
 	// Sending creation request of the user
 	resp, body, err := s.Request("delete", "rest/group_user_delete", &parameters)
@@ -127,15 +128,15 @@ func _delUserFromGroup(d *schema.ResourceData, meta interface{}, group string) e
 		json.Unmarshal([]byte(body), &buf)
 
 		if resp.StatusCode == 204 || (resp.StatusCode == 400 && len(buf) == 0) {
-			log.Printf("[DEBUG] SOLIDServer - User removed from group %s\n", group)
+			tflog.Debug(ctx, fmt.Sprintf("User removed from group %s\n", group))
 			return nil
 		}
 	}
 
-	return fmt.Errorf("SOLIDServer - Unable to remove user (%s) from group (%s)\n", d.Get("login").(string), group)
+	return fmt.Errorf("Unable to remove user (%s) from group (%s)\n", d.Get("login").(string), group)
 }
 
-func _readUserId(d *schema.ResourceData, meta interface{}) (map[string]interface{}, error) {
+func _readUserId(ctx context.Context, d *schema.ResourceData, meta interface{}) (map[string]interface{}, error) {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -151,18 +152,18 @@ func _readUserId(d *schema.ResourceData, meta interface{}) (map[string]interface
 
 		// Checking answer
 		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
-			log.Printf("[DEBUG] found user (oid): %s\n", d.Id())
+			tflog.Debug(ctx, fmt.Sprintf("Found user (oid): %s\n", d.Id()))
 			return buf[0], nil
 		}
 
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				return nil, fmt.Errorf("SOLIDServer - Unable to find user %s: %s\n",
+				return nil, fmt.Errorf("Unable to find user %s: %s\n",
 					d.Id(),
 					errMsg)
 			}
 		} else {
-			return nil, fmt.Errorf("SOLIDServer - Unable to find user (oid): %s\n", d.Id())
+			return nil, fmt.Errorf("Unable to find user (oid): %s\n", d.Id())
 		}
 	}
 
@@ -170,21 +171,7 @@ func _readUserId(d *schema.ResourceData, meta interface{}) (map[string]interface
 	return nil, err
 }
 
-func resourceuserExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	_, err := _readUserId(d, meta)
-
-	if err == nil {
-		return true, nil
-	}
-
-	// Unset local ID
-	d.SetId("")
-
-	// Reporting a failure
-	return false, err
-}
-
-func resourceuserCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceuserCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -219,29 +206,29 @@ func resourceuserCreate(d *schema.ResourceData, meta interface{}) error {
 		// Checking the answer
 		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
 			if oid, oidExist := buf[0]["ret_oid"].(string); oidExist {
-				log.Printf("[DEBUG] SOLIDServer - Created user (oid): %s\n", oid)
+				tflog.Debug(ctx, fmt.Sprintf("Created user (oid): %s\n", oid))
 				d.SetId(oid)
 			}
 		} else {
-			return fmt.Errorf("SOLIDServer - Unable to create user: %s\n", d.Get("login").(string))
+			return diag.Errorf("Unable to create user: %s\n", d.Get("login").(string))
 		}
 	} else {
-		return err
+		return diag.FromErr(err)
 	}
 
 	// Adding user to its groups
 	groups := d.Get("groups").(*schema.Set)
 
 	for _, elem := range groups.List() {
-		if _addUserToGroup(d, meta, elem.(string)) != nil {
-			return fmt.Errorf("SOLIDServer - Unable to affect user %s to his group\n", d.Get("login").(string))
+		if _addUserToGroup(ctx, d, meta, elem.(string)) != nil {
+			return diag.Errorf("Unable to affect user %s to his group\n", d.Get("login").(string))
 		}
 	}
 
 	return nil
 }
 
-func resourceuserUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceuserUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -280,14 +267,14 @@ func resourceuserUpdate(d *schema.ResourceData, meta interface{}) error {
 			// Checking the answer
 			if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
 				if oid, oidExist := buf[0]["ret_oid"].(string); oidExist {
-					log.Printf("[DEBUG] SOLIDServer - Updated user (oid): %s\n", oid)
+					tflog.Debug(ctx, fmt.Sprintf("Updated user (oid): %s\n", oid))
 					d.SetId(oid)
 				}
 			} else {
-				return fmt.Errorf("SOLIDServer - Unable to update user: %s\n", d.Get("login").(string))
+				return diag.Errorf("Unable to update user: %s\n", d.Get("login").(string))
 			}
 		} else {
-			return err
+			return diag.FromErr(err)
 		}
 	}
 
@@ -308,8 +295,8 @@ func resourceuserUpdate(d *schema.ResourceData, meta interface{}) error {
 
 		if !bFound {
 			// new group is not on the old set, we affect the user to it
-			if _addUserToGroup(d, meta, elem.(string)) != nil {
-				return fmt.Errorf("SOLIDServer - Unable to affect user %s to group %s\n",
+			if _addUserToGroup(ctx, d, meta, elem.(string)) != nil {
+				return diag.Errorf("Unable to affect user %s to group %s\n",
 					d.Get("login").(string),
 					elem.(string))
 			}
@@ -328,8 +315,8 @@ func resourceuserUpdate(d *schema.ResourceData, meta interface{}) error {
 
 		if !bFound {
 			// old group is not on the new set, suppress affectation
-			if _delUserFromGroup(d, meta, elem.(string)) != nil {
-				return fmt.Errorf("SOLIDServer - Unable to delete user %s from group %s\n",
+			if _delUserFromGroup(ctx, d, meta, elem.(string)) != nil {
+				return diag.Errorf("Unable to delete user %s from group %s\n",
 					d.Get("login").(string),
 					elem.(string))
 			}
@@ -339,7 +326,7 @@ func resourceuserUpdate(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-func resourceuserDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceuserDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -357,12 +344,12 @@ func resourceuserDelete(d *schema.ResourceData, meta interface{}) error {
 		if resp.StatusCode != 204 && len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
 				// Reporting a failure
-				return fmt.Errorf("SOLIDServer - Unable to delete user : %s (%s)\n", d.Get("login"), errMsg)
+				return diag.Errorf("Unable to delete user : %s (%s)\n", d.Get("login"), errMsg)
 			}
 		}
 
 		// Log deletion
-		log.Printf("[DEBUG] SOLIDServer - Deleted user (oid): %s\n", d.Id())
+		tflog.Debug(ctx, fmt.Sprintf("Deleted user (oid): %s\n", d.Id()))
 
 		// Unset local ID
 		d.SetId("")
@@ -372,16 +359,16 @@ func resourceuserDelete(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourceuserRead(d *schema.ResourceData, meta interface{}) error {
+func resourceuserRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
-	buf, err := _readUserId(d, meta)
+	buf, err := _readUserId(ctx, d, meta)
 
 	if err != nil {
-		return fmt.Errorf("SOLIDServer - Unable to find user: %s\n", d.Get("login").(string))
+		return diag.Errorf("Unable to find user: %s\n", d.Get("login").(string))
 	}
 
 	d.Set("login", buf["usr_login"].(string))
@@ -414,7 +401,7 @@ func resourceuserRead(d *schema.ResourceData, meta interface{}) error {
 	resp, body, err := s.Request("get", "rest/user_admin_group_list", &parameters)
 
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	var bufg [](map[string]interface{})
@@ -439,11 +426,11 @@ func resourceuserRead(d *schema.ResourceData, meta interface{}) error {
 		return nil
 	}
 
-	return fmt.Errorf("SOLIDServer - Unable to find group for user: %s\n",
+	return diag.Errorf("Unable to find group for user: %s\n",
 		d.Get("login").(string))
 }
 
-func resourceuserImportState(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+func resourceuserImportState(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -485,10 +472,10 @@ func resourceuserImportState(d *schema.ResourceData, meta interface{}) ([]*schem
 
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				log.Printf("[DEBUG] SOLIDServer - Unable to import user (oid): %s (%s)\n", d.Id(), errMsg)
+				tflog.Debug(ctx, fmt.Sprintf("Unable to import user (oid): %s (%s)\n", d.Id(), errMsg))
 			}
 		} else {
-			log.Printf("[DEBUG] SOLIDServer - Unable to find and import user (oid): %s\n", d.Id())
+			tflog.Debug(ctx, fmt.Sprintf("Unable to find and import user (oid): %s\n", d.Id()))
 		}
 
 		// Reporting a failure

@@ -1,23 +1,24 @@
 package solidserver
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"log"
 	"net/url"
 	"strconv"
 )
 
 func resourcevlandomain() *schema.Resource {
 	return &schema.Resource{
-		Create: resourcevlandomainCreate,
-		Read:   resourcevlandomainRead,
-		Update: resourcevlandomainUpdate,
-		Delete: resourcevlandomainDelete,
-		Exists: resourcevlandomainExists,
+		CreateContext: resourcevlandomainCreate,
+		ReadContext:   resourcevlandomainRead,
+		UpdateContext: resourcevlandomainUpdate,
+		DeleteContext: resourcevlandomainDelete,
 		Importer: &schema.ResourceImporter{
-			State: resourcevlandomainImportState,
+			StateContext: resourcevlandomainImportState,
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -54,44 +55,7 @@ func resourcevlandomain() *schema.Resource {
 	}
 }
 
-func resourcevlandomainExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	s := meta.(*SOLIDserver)
-
-	// Building parameters
-	parameters := url.Values{}
-	parameters.Add("vlmdomain_id", d.Id())
-
-	log.Printf("[DEBUG] Checking existence of VLAN Domain (oid): %s\n", d.Id())
-
-	// Sending read request
-	resp, body, err := s.Request("get", "rest/vlmdomain_info", &parameters)
-
-	if err == nil {
-		var buf [](map[string]interface{})
-		json.Unmarshal([]byte(body), &buf)
-
-		// Checking answer
-		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
-			return true, nil
-		}
-
-		if len(buf) > 0 {
-			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				log.Printf("[DEBUG] SOLIDServer - Unable to find VLAN Domain (oid): %s (%s)\n", d.Id(), errMsg)
-			}
-		} else {
-			log.Printf("[DEBUG] SOLIDServer - Unable to find VLAN Domain (oid): %s\n", d.Id())
-		}
-
-		// Unset local ID
-		d.SetId("")
-	}
-
-	// Reporting a failure
-	return false, err
-}
-
-func resourcevlandomainCreate(d *schema.ResourceData, meta interface{}) error {
+func resourcevlandomainCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -103,7 +67,7 @@ func resourcevlandomainCreate(d *schema.ResourceData, meta interface{}) error {
 
 	if d.Get("vxlan").(bool) {
 		if s.Version < 700 {
-			return fmt.Errorf("SOLIDServer - VXLAN Domain are not supported in this SOLIDserver version %d\n", s.Version)
+			return diag.Errorf("VXLAN Domain are not supported in this SOLIDserver version %d\n", s.Version)
 		}
 
 		parameters.Add("support_vxlan", "1")
@@ -119,7 +83,7 @@ func resourcevlandomainCreate(d *schema.ResourceData, meta interface{}) error {
 		// Checking the answer
 		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
 			if oid, oidExist := buf[0]["ret_oid"].(string); oidExist {
-				log.Printf("[DEBUG] SOLIDServer - Created VLAN Domain (oid): %s\n", oid)
+				tflog.Debug(ctx, fmt.Sprintf("Created VLAN Domain (oid): %s\n", oid))
 				d.SetId(oid)
 				return nil
 			}
@@ -128,18 +92,18 @@ func resourcevlandomainCreate(d *schema.ResourceData, meta interface{}) error {
 		// Reporting a failure
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				return fmt.Errorf("SOLIDServer - Unable to create VLAN Domain: %s (%s)", d.Get("name").(string), errMsg)
+				return diag.Errorf("Unable to create VLAN Domain: %s (%s)", d.Get("name").(string), errMsg)
 			}
 		}
 
-		return fmt.Errorf("SOLIDServer - Unable to create VLAN Domain: %s\n", d.Get("name").(string))
+		return diag.Errorf("Unable to create VLAN Domain: %s\n", d.Get("name").(string))
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourcevlandomainUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourcevlandomainUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -152,7 +116,7 @@ func resourcevlandomainUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	if d.Get("vxlan").(bool) {
 		if s.Version < 700 {
-			return fmt.Errorf("SOLIDServer - VXLAN Domain are not supported in this SOLIDserver version %d\n", s.Version)
+			return diag.Errorf("VXLAN Domain are not supported in this SOLIDserver version %d\n", s.Version)
 		}
 		parameters.Add("support_vxlan", "1")
 	}
@@ -167,7 +131,7 @@ func resourcevlandomainUpdate(d *schema.ResourceData, meta interface{}) error {
 		// Checking the answer
 		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
 			if oid, oidExist := buf[0]["ret_oid"].(string); oidExist {
-				log.Printf("[DEBUG] SOLIDServer - Updated VLAN Domain (oid): %s\n", oid)
+				tflog.Debug(ctx, fmt.Sprintf("Updated VLAN Domain (oid): %s\n", oid))
 				d.SetId(oid)
 				return nil
 			}
@@ -176,18 +140,18 @@ func resourcevlandomainUpdate(d *schema.ResourceData, meta interface{}) error {
 		// Reporting a failure
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				return fmt.Errorf("SOLIDServer - Unable to VLAN Domain: %s (%s)", d.Get("name").(string), errMsg)
+				return diag.Errorf("Unable to VLAN Domain: %s (%s)", d.Get("name").(string), errMsg)
 			}
 		}
 
-		return fmt.Errorf("SOLIDServer - Unable to VLAN Domain: %s\n", d.Get("name").(string))
+		return diag.Errorf("Unable to VLAN Domain: %s\n", d.Get("name").(string))
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourcevlandomainDelete(d *schema.ResourceData, meta interface{}) error {
+func resourcevlandomainDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -206,15 +170,15 @@ func resourcevlandomainDelete(d *schema.ResourceData, meta interface{}) error {
 			// Reporting a failure
 			if len(buf) > 0 {
 				if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-					return fmt.Errorf("SOLIDServer - Unable to delete VLAN Domain: %s (%s)", d.Get("name").(string), errMsg)
+					return diag.Errorf("Unable to delete VLAN Domain: %s (%s)", d.Get("name").(string), errMsg)
 				}
 			}
 
-			return fmt.Errorf("SOLIDServer - Unable to delete VLAN Domain: %s", d.Get("name").(string))
+			return diag.Errorf("Unable to delete VLAN Domain: %s", d.Get("name").(string))
 		}
 
 		// Log deletion
-		log.Printf("[DEBUG] SOLIDServer - Deleted VLAN Domain (oid): %s\n", d.Id())
+		tflog.Debug(ctx, fmt.Sprintf("Deleted VLAN Domain (oid): %s\n", d.Id()))
 
 		// Unset local ID
 		d.SetId("")
@@ -224,10 +188,10 @@ func resourcevlandomainDelete(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourcevlandomainRead(d *schema.ResourceData, meta interface{}) error {
+func resourcevlandomainRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -274,24 +238,24 @@ func resourcevlandomainRead(d *schema.ResourceData, meta interface{}) error {
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
 				// Log the error
-				log.Printf("[DEBUG] SOLIDServer - Unable to find VLAN Domain: %s (%s)\n", d.Get("name"), errMsg)
+				tflog.Debug(ctx, fmt.Sprintf("Unable to find VLAN Domain: %s (%s)\n", d.Get("name"), errMsg))
 			}
 		} else {
 			// Log the error
-			log.Printf("[DEBUG] SOLIDServer - Unable to find VLAN Domain (oid): %s\n", d.Id())
+			tflog.Debug(ctx, fmt.Sprintf("Unable to find VLAN Domain (oid): %s\n", d.Id()))
 		}
 
 		// Do not unset the local ID to avoid inconsistency
 
 		// Reporting a failure
-		return fmt.Errorf("SOLIDServer - Unable to find VLAN Domain: %s\n", d.Get("name").(string))
+		return diag.Errorf("Unable to find VLAN Domain: %s\n", d.Get("name").(string))
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourcevlandomainImportState(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+func resourcevlandomainImportState(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -337,10 +301,10 @@ func resourcevlandomainImportState(d *schema.ResourceData, meta interface{}) ([]
 
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				log.Printf("[DEBUG] SOLIDServer - Unable to import VLAN Domain(oid): %s (%s)\n", d.Id(), errMsg)
+				tflog.Debug(ctx, fmt.Sprintf("Unable to import VLAN Domain(oid): %s (%s)\n", d.Id(), errMsg))
 			}
 		} else {
-			log.Printf("[DEBUG] SOLIDServer - Unable to find and import VLAN Domain (oid): %s\n", d.Id())
+			tflog.Debug(ctx, fmt.Sprintf("Unable to find and import VLAN Domain (oid): %s\n", d.Id()))
 		}
 
 		// Reporting a failure

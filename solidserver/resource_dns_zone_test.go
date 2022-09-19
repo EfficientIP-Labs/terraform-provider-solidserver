@@ -6,12 +6,11 @@
 package solidserver
 
 import (
+	"context"
 	"fmt"
-	"testing"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-
 	"github.com/satori/go.uuid"
+	"testing"
 )
 
 // create non terminal subnet

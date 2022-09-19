@@ -7,12 +7,9 @@ package solidserver
 
 import (
 	"fmt"
-	"testing"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	// "github.com/hashicorp/terraform/terraform"
-
 	"github.com/satori/go.uuid"
+	"testing"
 )
 
 // func Config_CreateSpace(spacename string) string {

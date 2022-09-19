@@ -1,17 +1,19 @@
 package solidserver
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"log"
 	"net/url"
 	"strconv"
 )
 
 func dataSourceip6subnetquery() *schema.Resource {
 	return &schema.Resource{
-		Read: dataSourceip6subnetqueryRead,
+		ReadContext: dataSourceip6subnetqueryRead,
 
 		Schema: map[string]*schema.Schema{
 			"query": {
@@ -83,7 +85,7 @@ func dataSourceip6subnetquery() *schema.Resource {
 	}
 }
 
-func dataSourceip6subnetqueryRead(d *schema.ResourceData, meta interface{}) error {
+func dataSourceip6subnetqueryRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 	d.SetId("")
 
@@ -142,17 +144,17 @@ func dataSourceip6subnetqueryRead(d *schema.ResourceData, meta interface{}) erro
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
 				// Log the error
-				log.Printf("[DEBUG] SOLIDServer - Unable to read information from IPv6 subnet: %s (%s)\n", d.Get("name").(string), errMsg)
+				tflog.Debug(ctx, fmt.Sprintf("Unable to read information from IPv6 subnet: %s (%s)\n", d.Get("name").(string), errMsg))
 			}
 		} else {
 			// Log the error
-			log.Printf("[DEBUG] SOLIDServer - Unable to read information from IPv6 subnet: %s\n", d.Get("name").(string))
+			tflog.Debug(ctx, fmt.Sprintf("Unable to read information from IPv6 subnet: %s\n", d.Get("name").(string)))
 		}
 
 		// Reporting a failure
-		return fmt.Errorf("SOLIDServer - Unable to find IPv6 subnet: %s", d.Get("name").(string))
+		return diag.Errorf("Unable to find IPv6 subnet: %s", d.Get("name").(string))
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }

@@ -1,16 +1,18 @@
 package solidserver
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"log"
 	"net/url"
 )
 
 func dataSourceipspace() *schema.Resource {
 	return &schema.Resource{
-		Read: dataSourceipspaceRead,
+		ReadContext: dataSourceipspaceRead,
 
 		Schema: map[string]*schema.Schema{
 			"name": {
@@ -32,7 +34,7 @@ func dataSourceipspace() *schema.Resource {
 	}
 }
 
-func dataSourceipspaceRead(d *schema.ResourceData, meta interface{}) error {
+func dataSourceipspaceRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 	d.SetId("")
 
@@ -71,17 +73,17 @@ func dataSourceipspaceRead(d *schema.ResourceData, meta interface{}) error {
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
 				// Log the error
-				log.Printf("[DEBUG] SOLIDServer - Unable to read information from IP space: %s (%s)\n", d.Get("name").(string), errMsg)
+				tflog.Debug(ctx, fmt.Sprintf("Unable to read information from IP space: %s (%s)\n", d.Get("name").(string), errMsg))
 			}
 		} else {
 			// Log the error
-			log.Printf("[DEBUG] SOLIDServer - Unable to read information from IP space: %s\n", d.Get("name").(string))
+			tflog.Debug(ctx, fmt.Sprintf("Unable to read information from IP space: %s\n", d.Get("name").(string)))
 		}
 
 		// Reporting a failure
-		return fmt.Errorf("SOLIDServer - Unable to find IP space: %s\n", d.Get("name").(string))
+		return diag.Errorf("Unable to find IP space: %s\n", d.Get("name").(string))
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }

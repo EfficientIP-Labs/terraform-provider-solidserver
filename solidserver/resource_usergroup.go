@@ -1,23 +1,24 @@
 package solidserver
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"log"
 	"net/url"
 	// "strconv"
 )
 
 func resourceusergroup() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceusergroupCreate,
-		Read:   resourceusergroupRead,
-		Update: resourceusergroupUpdate,
-		Delete: resourceusergroupDelete,
-		Exists: resourceusergroupExists,
+		CreateContext: resourceusergroupCreate,
+		ReadContext:   resourceusergroupRead,
+		UpdateContext: resourceusergroupUpdate,
+		DeleteContext: resourceusergroupDelete,
 		Importer: &schema.ResourceImporter{
-			State: resourceusergroupImportState,
+			StateContext: resourceusergroupImportState,
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -38,47 +39,7 @@ func resourceusergroup() *schema.Resource {
 	}
 }
 
-func resourceusergroupExists(d *schema.ResourceData,
-	meta interface{}) (bool, error) {
-	s := meta.(*SOLIDserver)
-
-	// Building parameters
-	parameters := url.Values{}
-	parameters.Add("grp_id", d.Id())
-
-	// Sending read request
-	resp, body, err := s.Request("get", "rest/group_admin_info", &parameters)
-
-	if err == nil {
-		var buf [](map[string]interface{})
-		json.Unmarshal([]byte(body), &buf)
-
-		// Checking answer
-		if (resp.StatusCode == 200) && len(buf) > 0 {
-			log.Printf("[DEBUG] resourceusergroupExists found group (oid): %s\n", d.Id())
-			return true, nil
-		}
-
-		if len(buf) > 0 {
-			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				return false, fmt.Errorf("SOLIDServer - Unable to find group %s: %s\n",
-					d.Id(),
-					errMsg)
-			}
-		} else {
-			return false, fmt.Errorf("SOLIDServer - Unable to find group (oid): %s\n", d.Id())
-		}
-	}
-
-	// Unset local ID
-	d.SetId("")
-
-	// Reporting a failure
-	return false, err
-}
-
-func resourceusergroupCreate(d *schema.ResourceData,
-	meta interface{}) error {
+func resourceusergroupCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -100,19 +61,18 @@ func resourceusergroupCreate(d *schema.ResourceData,
 		// Checking the answer
 		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
 			if oid, oidExist := buf[0]["ret_oid"].(string); oidExist {
-				log.Printf("[DEBUG] - Created group (oid): %s\n", oid)
+				tflog.Debug(ctx, fmt.Sprintf("Created group (oid): %s\n", oid))
 				d.SetId(oid)
 			}
 		}
 	} else {
-		return err
+		return diag.FromErr(err)
 	}
 
 	return nil
 }
 
-func resourceusergroupUpdate(d *schema.ResourceData,
-	meta interface{}) error {
+func resourceusergroupUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -147,22 +107,21 @@ func resourceusergroupUpdate(d *schema.ResourceData,
 			// Checking the answer
 			if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
 				if oid, oidExist := buf[0]["ret_oid"].(string); oidExist {
-					log.Printf("[DEBUG] - Updated group (oid): %s\n", oid)
+					tflog.Debug(ctx, fmt.Sprintf("Updated group (oid): %s\n", oid))
 					d.SetId(oid)
 				}
 			} else {
-				return fmt.Errorf("SOLIDServer - Unable to update group: %s\n", d.Get("name").(string))
+				return diag.Errorf("Unable to update group: %s\n", d.Get("name").(string))
 			}
 		} else {
-			return err
+			return diag.FromErr(err)
 		}
 	}
 
 	return nil
 }
 
-func resourceusergroupDelete(d *schema.ResourceData,
-	meta interface{}) error {
+func resourceusergroupDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -179,18 +138,17 @@ func resourceusergroupDelete(d *schema.ResourceData,
 		// Checking the answer
 		if resp.StatusCode == 200 && len(buf) > 0 {
 			if oid, oidExist := buf[0]["ret_oid"].(string); oidExist {
-				log.Printf("[DEBUG] - group deleted (oid): %s\n", oid)
+				tflog.Debug(ctx, fmt.Sprintf("Group deleted (oid): %s\n", oid))
 				d.SetId("")
 				return nil
 			}
 		}
 	}
 
-	return fmt.Errorf("SOLIDServer - error deleting group (oid): %s\n", d.Id())
+	return diag.Errorf("error deleting group (oid): %s\n", d.Id())
 }
 
-func resourceusergroupRead(d *schema.ResourceData,
-	meta interface{}) error {
+func resourceusergroupRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -206,7 +164,7 @@ func resourceusergroupRead(d *schema.ResourceData,
 
 		// Checking answer
 		if (resp.StatusCode == 200) && len(buf) > 0 {
-			log.Printf("[DEBUG] resourceusergroupRead found group (oid): %s\n", d.Id())
+			tflog.Debug(ctx, fmt.Sprintf("Found group (oid): %s\n", d.Id()))
 
 			d.Set("description", buf[0]["grp_description"].(string))
 			d.Set("name", buf[0]["grp_name"].(string))
@@ -216,18 +174,17 @@ func resourceusergroupRead(d *schema.ResourceData,
 
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				return fmt.Errorf("SOLIDServer - Unable to find group %s: %s\n",
+				return diag.Errorf("Unable to find group %s: %s\n",
 					d.Id(),
 					errMsg)
 			}
 		}
 	}
 
-	return fmt.Errorf("SOLIDServer - Unable to find group (oid): %s\n", d.Id())
+	return diag.Errorf("Unable to find group (oid): %s\n", d.Id())
 }
 
-func resourceusergroupImportState(d *schema.ResourceData,
-	meta interface{}) ([]*schema.ResourceData, error) {
+func resourceusergroupImportState(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -251,14 +208,14 @@ func resourceusergroupImportState(d *schema.ResourceData,
 
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				log.Printf("[DEBUG] - Unable to import group (oid): %s (%s)\n", d.Id(), errMsg)
+				tflog.Debug(ctx, fmt.Sprintf("Unable to import group (oid): %s (%s)\n", d.Id(), errMsg))
 			}
 		} else {
-			log.Printf("[DEBUG] - Unable to find and import group (oid): %s\n", d.Id())
+			tflog.Debug(ctx, fmt.Sprintf("Unable to find and import group (oid): %s\n", d.Id()))
 		}
 
 		// Reporting a failure
-		return nil, fmt.Errorf("SOLIDServer - Unable to find and import group (oid): %s\n", d.Id())
+		return nil, fmt.Errorf("Unable to find and import group (oid): %s\n", d.Id())
 	}
 
 	// Reporting a failure

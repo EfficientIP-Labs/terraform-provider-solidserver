@@ -1,23 +1,23 @@
 package solidserver
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"net/url"
 	"regexp"
 	"strings"
-
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
 
 func resourceip6mac() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceip6macCreate,
-		Read:   resourceip6macRead,
-		Delete: resourceip6macDelete,
-		Exists: resourceip6macExists,
+		CreateContext: resourceip6macCreate,
+		ReadContext:   resourceip6macRead,
+		DeleteContext: resourceip6macDelete,
 
 		Schema: map[string]*schema.Schema{
 			"space": {
@@ -45,51 +45,7 @@ func resourceip6mac() *schema.Resource {
 	}
 }
 
-func resourceip6macExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	s := meta.(*SOLIDserver)
-
-	// Building parameters
-	parameters := url.Values{}
-	parameters.Add("ip6_id", d.Id())
-
-	log.Printf("[DEBUG] Checking existence of IPv6 address (oid): %s; associated to the mac: %s\n", d.Id(), d.Get("mac").(string))
-
-	// Sending the read request
-	resp, body, err := s.Request("get", "rest/ip6_address6_info", &parameters)
-
-	if err == nil {
-		var buf [](map[string]interface{})
-		json.Unmarshal([]byte(body), &buf)
-
-		// Checking the answer
-		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
-			if ip6Mac, ip6MacExist := buf[0]["ip6_mac_addr"].(string); ip6MacExist {
-				if strings.ToLower(ip6Mac) == strings.ToLower(d.Get("mac").(string)) {
-					return true, nil
-				}
-				// Log the error
-				log.Printf("[DEBUG] SOLIDServer - Unable to find the IPv6 address (oid): %s; associated to the mac (%s)\n", d.Id(), d.Get("mac").(string))
-			}
-		} else {
-			if len(buf) > 0 {
-				if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-					// Log the error
-					log.Printf("[DEBUG] SOLIDServer - Unable to find IPv6 address (oid): %s (%s)\n", d.Id(), errMsg)
-				}
-			} else {
-				// Log the error
-				log.Printf("[DEBUG] SOLIDServer - Unable to find IPv6 address (oid): %s\n", d.Id())
-			}
-		}
-
-		// Unset local ID
-		d.SetId("")
-	}
-
-	return false, err
-}
-
-func resourceip6macCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceip6macCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -110,20 +66,20 @@ func resourceip6macCreate(d *schema.ResourceData, meta interface{}) error {
 		// Checking the answer
 		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
 			if oid, oidExist := buf[0]["ret_oid"].(string); oidExist {
-				log.Printf("[DEBUG] SOLIDServer - Created IP MAC association (oid) %s\n", oid)
+				tflog.Debug(ctx, fmt.Sprintf("Created IP MAC association (oid) %s\n", oid))
 				d.SetId(oid)
 				return nil
 			}
 		} else {
-			return fmt.Errorf("SOLIDServer - Failed to create IP MAC association between %s and %s\n", d.Get("address").(string), d.Get("mac").(string))
+			return diag.Errorf("Failed to create IP MAC association between %s and %s\n", d.Get("address").(string), d.Get("mac").(string))
 		}
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourceip6macDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceip6macDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -144,27 +100,27 @@ func resourceip6macDelete(d *schema.ResourceData, meta interface{}) error {
 		// Checking the answer
 		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
 			if oid, oidExist := buf[0]["ret_oid"].(string); oidExist {
-				log.Printf("[DEBUG] SOLIDServer - Deleted IP MAC association (oid) %s\n", oid)
+				tflog.Debug(ctx, fmt.Sprintf("Deleted IP MAC association (oid) %s\n", oid))
 				d.SetId("")
 				return nil
 			}
 		} else {
-			return fmt.Errorf("SOLIDServer - Failed to delete IP MAC association between %s and %s\n", d.Get("address").(string), d.Get("mac").(string))
+			return diag.Errorf("Failed to delete IP MAC association between %s and %s\n", d.Get("address").(string), d.Get("mac").(string))
 		}
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourceip6macRead(d *schema.ResourceData, meta interface{}) error {
+func resourceip6macRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
 	parameters := url.Values{}
 	parameters.Add("ip6_id", d.Id())
 
-	log.Printf("[DEBUG] Reading information about IPv6 address (oid): %s; associated to the mac: %s\n", d.Id(), d.Get("mac").(string))
+	tflog.Debug(ctx, fmt.Sprintf("Reading information about IPv6 address (oid): %s; associated to the mac: %s\n", d.Id(), d.Get("mac").(string)))
 
 	// Sending the read request
 	resp, body, err := s.Request("get", "rest/ip6_address6_info", &parameters)
@@ -180,17 +136,17 @@ func resourceip6macRead(d *schema.ResourceData, meta interface{}) error {
 					return nil
 				}
 				// Log the error
-				log.Printf("[DEBUG] SOLIDServer - Unable to find the IPv6 address (oid): %s; associated to the mac (%s)\n", d.Id(), d.Get("mac").(string))
+				tflog.Debug(ctx, fmt.Sprintf("Unable to find the IPv6 address (oid): %s; associated to the mac (%s)\n", d.Id(), d.Get("mac").(string)))
 			}
 		} else {
 			if len(buf) > 0 {
 				if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
 					// Log the error
-					log.Printf("[DEBUG] SOLIDServer - Unable to find IPv6 address (oid): %s (%s)\n", d.Id(), errMsg)
+					tflog.Debug(ctx, fmt.Sprintf("Unable to find IPv6 address (oid): %s (%s)\n", d.Id(), errMsg))
 				}
 			} else {
 				// Log the error
-				log.Printf("[DEBUG] SOLIDServer - Unable to find IPv6 address (oid): %s\n", d.Id())
+				tflog.Debug(ctx, fmt.Sprintf("Unable to find IPv6 address (oid): %s\n", d.Id()))
 			}
 		}
 
@@ -198,5 +154,5 @@ func resourceip6macRead(d *schema.ResourceData, meta interface{}) error {
 		d.SetId("")
 	}
 
-	return err
+	return diag.FromErr(err)
 }

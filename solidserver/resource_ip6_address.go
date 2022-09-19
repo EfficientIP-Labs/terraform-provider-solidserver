@@ -1,26 +1,26 @@
 package solidserver
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"net/url"
 	"regexp"
 	"strings"
-
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
 
 func resourceip6address() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceip6addressCreate,
-		Read:   resourceip6addressRead,
-		Update: resourceip6addressUpdate,
-		Delete: resourceip6addressDelete,
-		Exists: resourceip6addressExists,
+		CreateContext: resourceip6addressCreate,
+		ReadContext:   resourceip6addressRead,
+		UpdateContext: resourceip6addressUpdate,
+		DeleteContext: resourceip6addressDelete,
 		Importer: &schema.ResourceImporter{
-			State: resourceip6addressImportState,
+			StateContext: resourceip6addressImportState,
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -100,45 +100,7 @@ func resourceip6address() *schema.Resource {
 	}
 }
 
-func resourceip6addressExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	s := meta.(*SOLIDserver)
-
-	// Building parameters
-	parameters := url.Values{}
-	parameters.Add("ip6_id", d.Id())
-
-	log.Printf("[DEBUG] Checking existence of IPv6 address (oid): %s\n", d.Id())
-
-	// Sending the read request
-	resp, body, err := s.Request("get", "rest/ip6_address6_info", &parameters)
-
-	if err == nil {
-		var buf [](map[string]interface{})
-		json.Unmarshal([]byte(body), &buf)
-
-		// Checking the answer
-		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
-			return true, nil
-		}
-
-		if len(buf) > 0 {
-			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				// Log the error
-				log.Printf("[DEBUG] SOLIDServer - Unable to find IPv6 address (oid): %s (%s)\n", d.Id(), errMsg)
-			}
-		} else {
-			// Log the error
-			log.Printf("[DEBUG] SOLIDServer - Unable to find IPv6 address (oid): %s\n", d.Id())
-		}
-
-		// Unset local ID
-		d.SetId("")
-	}
-
-	return false, err
-}
-
-func resourceip6addressCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceip6addressCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	var requestedHexIP string = ip6tohexip6(d.Get("request_ip").(string))
@@ -150,17 +112,17 @@ func resourceip6addressCreate(d *schema.ResourceData, meta interface{}) error {
 	siteID, siteErr := ipsiteidbyname(d.Get("space").(string), meta)
 	if siteErr != nil {
 		// Reporting a failure
-		return siteErr
+		return diag.FromErr(siteErr)
 	}
 
 	subnetInfo, subnetErr := ip6subnetinfobyname(siteID, d.Get("subnet").(string), true, meta)
 	if subnetInfo == nil || subnetErr != nil {
 		// Reporting a failure
 		if subnetInfo == nil {
-			return fmt.Errorf("SOLIDServer - Unable to create IP address: %s, unable to find requested network\n", d.Get("name").(string))
+			return diag.Errorf("Unable to create IP address: %s, unable to find requested network\n", d.Get("name").(string))
 		}
 
-		return subnetErr
+		return diag.FromErr(subnetErr)
 	}
 
 	if len(d.Get("pool").(string)) > 0 {
@@ -169,7 +131,7 @@ func resourceip6addressCreate(d *schema.ResourceData, meta interface{}) error {
 		poolInfo, poolErr = ip6poolinfobyname(siteID, d.Get("pool").(string), d.Get("subnet").(string), meta)
 		if poolErr != nil {
 			// Reporting a failure
-			return poolErr
+			return diag.FromErr(poolErr)
 		}
 	}
 
@@ -181,7 +143,7 @@ func resourceip6addressCreate(d *schema.ResourceData, meta interface{}) error {
 
 		if deviceErr != nil {
 			// Reporting a failure
-			return deviceErr
+			return diag.FromErr(deviceErr)
 		}
 	}
 
@@ -194,12 +156,12 @@ func resourceip6addressCreate(d *schema.ResourceData, meta interface{}) error {
 
 			if poolInfo != nil && (strings.Compare(poolInfo["start_hex_addr"].(string), requestedHexIP) == 1 ||
 				strings.Compare(requestedHexIP, poolInfo["end_hex_addr"].(string)) == 1) {
-				return fmt.Errorf("SOLIDServer - Unable to create IPv6 address: %s, address is out of pool's range\n", d.Get("name").(string))
+				return diag.Errorf("Unable to create IPv6 address: %s, address is out of pool's range\n", d.Get("name").(string))
 			}
 
 			ipAddresses = []string{d.Get("request_ip").(string)}
 		} else {
-			return fmt.Errorf("SOLIDServer - Unable to create IPv6 address: %s, address is out of network's range\n", d.Get("name").(string))
+			return diag.Errorf("Unable to create IPv6 address: %s, address is out of network's range\n", d.Get("name").(string))
 		}
 	} else {
 		var poolID string = ""
@@ -213,7 +175,7 @@ func resourceip6addressCreate(d *schema.ResourceData, meta interface{}) error {
 
 		if ipErr != nil {
 			// Reporting a failure
-			return ipErr
+			return diag.FromErr(ipErr)
 		}
 	}
 
@@ -244,7 +206,7 @@ func resourceip6addressCreate(d *schema.ResourceData, meta interface{}) error {
 			// Checking the answer
 			if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
 				if oid, oidExist := buf[0]["ret_oid"].(string); oidExist {
-					log.Printf("[DEBUG] SOLIDServer - Created IPv6 address (oid): %s\n", oid)
+					tflog.Debug(ctx, fmt.Sprintf("Created IPv6 address (oid): %s\n", oid))
 					d.SetId(oid)
 					d.Set("address", ipAddresses[i])
 					return nil
@@ -252,25 +214,25 @@ func resourceip6addressCreate(d *schema.ResourceData, meta interface{}) error {
 			} else {
 				if len(buf) > 0 {
 					if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-						log.Printf("[DEBUG] SOLIDServer - Failed IPv6 address registration for IPv6 address: %s with address: %s (%s)\n", d.Get("name").(string), ipAddresses[i], errMsg)
+						tflog.Debug(ctx, fmt.Sprintf("Failed IPv6 address registration for IPv6 address: %s with address: %s (%s)\n", d.Get("name").(string), ipAddresses[i], errMsg))
 					} else {
-						log.Printf("[DEBUG] SOLIDServer - Failed IPv6 address registration for IPv6 address: %s with address: %s\n", d.Get("name").(string), ipAddresses[i])
+						tflog.Debug(ctx, fmt.Sprintf("Failed IPv6 address registration for IPv6 address: %s with address: %s\n", d.Get("name").(string), ipAddresses[i]))
 					}
 				} else {
-					log.Printf("[DEBUG] SOLIDServer - Failed IPv6 address registration for IPv6 address: %s with address: %s\n", d.Get("name").(string), ipAddresses[i])
+					tflog.Debug(ctx, fmt.Sprintf("Failed IPv6 address registration for IPv6 address: %s with address: %s\n", d.Get("name").(string), ipAddresses[i]))
 				}
 			}
 		} else {
 			// Reporting a failure
-			return err
+			return diag.FromErr(err)
 		}
 	}
 
 	// Reporting a failure
-	return fmt.Errorf("SOLIDServer - Unable to create IPv6 address: %s, unable to find a suitable network or address\n", d.Get("name").(string))
+	return diag.Errorf("Unable to create IPv6 address: %s, unable to find a suitable network or address\n", d.Get("name").(string))
 }
 
-func resourceip6addressUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceip6addressUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	var deviceID string = ""
@@ -283,7 +245,7 @@ func resourceip6addressUpdate(d *schema.ResourceData, meta interface{}) error {
 
 		if err != nil {
 			// Reporting a failure
-			return err
+			return diag.FromErr(err)
 		}
 	}
 
@@ -312,7 +274,7 @@ func resourceip6addressUpdate(d *schema.ResourceData, meta interface{}) error {
 		// Checking the answer
 		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
 			if oid, oidExist := buf[0]["ret_oid"].(string); oidExist {
-				log.Printf("[DEBUG] SOLIDServer - Updated IPv6 address (oid): %s\n", oid)
+				tflog.Debug(ctx, fmt.Sprintf("Updated IPv6 address (oid): %s\n", oid))
 				d.SetId(oid)
 				return nil
 			}
@@ -321,18 +283,18 @@ func resourceip6addressUpdate(d *schema.ResourceData, meta interface{}) error {
 		// Reporting a failure
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				return fmt.Errorf("SOLIDServer - Unable to update IPv6 address: %s (%s)", d.Get("name").(string), errMsg)
+				return diag.Errorf("Unable to update IPv6 address: %s (%s)", d.Get("name").(string), errMsg)
 			}
 		}
 
-		return fmt.Errorf("SOLIDServer - Unable to update IPv6 address: %s\n", d.Get("name").(string))
+		return diag.Errorf("Unable to update IPv6 address: %s\n", d.Get("name").(string))
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourceip6addressDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceip6addressDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -351,15 +313,15 @@ func resourceip6addressDelete(d *schema.ResourceData, meta interface{}) error {
 			// Reporting a failure
 			if len(buf) > 0 {
 				if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-					return fmt.Errorf("SOLIDServer - Unable to delete IPv6 address : %s (%s)", d.Get("name").(string), errMsg)
+					return diag.Errorf("Unable to delete IPv6 address : %s (%s)", d.Get("name").(string), errMsg)
 				}
 			}
 
-			return fmt.Errorf("SOLIDServer - Unable to delete IPv6 address : %s", d.Get("name").(string))
+			return diag.Errorf("Unable to delete IPv6 address : %s", d.Get("name").(string))
 		}
 
 		// Log deletion
-		log.Printf("[DEBUG] SOLIDServer - Deleted IPv6 address's oid: %s\n", d.Id())
+		tflog.Debug(ctx, fmt.Sprintf("Deleted IPv6 address's oid: %s\n", d.Id()))
 
 		// Unset local ID
 		d.SetId("")
@@ -369,10 +331,10 @@ func resourceip6addressDelete(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourceip6addressRead(d *schema.ResourceData, meta interface{}) error {
+func resourceip6addressRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -422,24 +384,24 @@ func resourceip6addressRead(d *schema.ResourceData, meta interface{}) error {
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
 				// Log the error
-				log.Printf("[DEBUG] SOLIDServer - Unable to find IPv6 address: %s (%s)\n", d.Get("name"), errMsg)
+				tflog.Debug(ctx, fmt.Sprintf("Unable to find IPv6 address: %s (%s)\n", d.Get("name"), errMsg))
 			}
 		} else {
 			// Log the error
-			log.Printf("[DEBUG] SOLIDServer - Unable to find IPv6 address (oid): %s\n", d.Id())
+			tflog.Debug(ctx, fmt.Sprintf("Unable to find IPv6 address (oid): %s\n", d.Id()))
 		}
 
 		// Do not unset the local ID to avoid inconsistency
 
 		// Reporting a failure
-		return fmt.Errorf("SOLIDServer - Unable to find IPv6 address: %s\n", d.Get("name").(string))
+		return diag.Errorf("Unable to find IPv6 address: %s\n", d.Get("name").(string))
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourceip6addressImportState(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+func resourceip6addressImportState(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -483,11 +445,11 @@ func resourceip6addressImportState(d *schema.ResourceData, meta interface{}) ([]
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
 				// Log the error
-				log.Printf("[DEBUG] SOLIDServer - Unable to import IPv6 address (oid): %s (%s)\n", d.Id(), errMsg)
+				tflog.Debug(ctx, fmt.Sprintf("Unable to import IPv6 address (oid): %s (%s)\n", d.Id(), errMsg))
 			}
 		} else {
 			// Log the error
-			log.Printf("[DEBUG] SOLIDServer - Unable to find and import IPv6 address (oid): %s\n", d.Id())
+			tflog.Debug(ctx, fmt.Sprintf("Unable to find and import IPv6 address (oid): %s\n", d.Id()))
 		}
 
 		// Reporting a failure

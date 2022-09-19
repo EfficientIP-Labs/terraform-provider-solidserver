@@ -1,24 +1,25 @@
 package solidserver
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"log"
 	"net/url"
 	"strconv"
 )
 
 func resourceapplicationpool() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceapplicationpoolCreate,
-		Read:   resourceapplicationpoolRead,
-		Update: resourceapplicationpoolUpdate,
-		Delete: resourceapplicationpoolDelete,
-		Exists: resourceapplicationpoolExists,
+		CreateContext: resourceapplicationpoolCreate,
+		ReadContext:   resourceapplicationpoolRead,
+		UpdateContext: resourceapplicationpoolUpdate,
+		DeleteContext: resourceapplicationpoolDelete,
 		Importer: &schema.ResourceImporter{
-			State: resourceapplicationpoolImportState,
+			StateContext: resourceapplicationpoolImportState,
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -77,49 +78,7 @@ func resourceapplicationpool() *schema.Resource {
 	}
 }
 
-func resourceapplicationpoolExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	s := meta.(*SOLIDserver)
-
-	// Building parameters
-	parameters := url.Values{}
-	parameters.Add("apppool_id", d.Id())
-
-	if s.Version < 710 {
-		// Reporting a failure
-		return false, fmt.Errorf("SOLIDServer - Object not supported in this SOLIDserver version")
-	}
-
-	log.Printf("[DEBUG] Checking existence of application pool (oid): %s\n", d.Id())
-
-	// Sending read request
-	resp, body, err := s.Request("get", "rest/app_pool_info", &parameters)
-
-	if err == nil {
-		var buf [](map[string]interface{})
-		json.Unmarshal([]byte(body), &buf)
-
-		// Checking answer
-		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
-			return true, nil
-		}
-
-		if len(buf) > 0 {
-			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				log.Printf("[DEBUG] SOLIDServer - Unable to find application pool (oid): %s (%s)\n", d.Id(), errMsg)
-			}
-		} else {
-			log.Printf("[DEBUG] SOLIDServer - Unable to find application pool (oid): %s\n", d.Id())
-		}
-
-		// Unset local ID
-		d.SetId("")
-	}
-
-	// Reporting a failure
-	return false, err
-}
-
-func resourceapplicationpoolCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceapplicationpoolCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -145,7 +104,7 @@ func resourceapplicationpoolCreate(d *schema.ResourceData, meta interface{}) err
 
 	if s.Version < 710 {
 		// Reporting a failure
-		return fmt.Errorf("SOLIDServer - Object not supported in this SOLIDserver version")
+		return diag.Errorf("Object not supported in this SOLIDserver version")
 	}
 
 	// Sending creation request
@@ -158,7 +117,7 @@ func resourceapplicationpoolCreate(d *schema.ResourceData, meta interface{}) err
 		// Checking the answer
 		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
 			if oid, oidExist := buf[0]["ret_oid"].(string); oidExist {
-				log.Printf("[DEBUG] SOLIDServer - Created application pool (oid): %s\n", oid)
+				tflog.Debug(ctx, fmt.Sprintf("Created application pool (oid): %s\n", oid))
 				d.SetId(oid)
 				return nil
 			}
@@ -167,18 +126,18 @@ func resourceapplicationpoolCreate(d *schema.ResourceData, meta interface{}) err
 		// Reporting a failure
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				return fmt.Errorf("SOLIDServer - Unable to create application pool: %s (%s)", d.Get("name").(string), errMsg)
+				return diag.Errorf("Unable to create application pool: %s (%s)", d.Get("name").(string), errMsg)
 			}
 		}
 
-		return fmt.Errorf("SOLIDServer - Unable to create application pool: %s\n", d.Get("name").(string))
+		return diag.Errorf("Unable to create application pool: %s\n", d.Get("name").(string))
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourceapplicationpoolUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceapplicationpoolUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -205,7 +164,7 @@ func resourceapplicationpoolUpdate(d *schema.ResourceData, meta interface{}) err
 
 	if s.Version < 710 {
 		// Reporting a failure
-		return fmt.Errorf("SOLIDServer - Object not supported in this SOLIDserver version")
+		return diag.Errorf("Object not supported in this SOLIDserver version")
 	}
 
 	// Sending the update request
@@ -218,7 +177,7 @@ func resourceapplicationpoolUpdate(d *schema.ResourceData, meta interface{}) err
 		// Checking the answer
 		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
 			if oid, oidExist := buf[0]["ret_oid"].(string); oidExist {
-				log.Printf("[DEBUG] SOLIDServer - Updated application pool (oid): %s\n", oid)
+				tflog.Debug(ctx, fmt.Sprintf("Updated application pool (oid): %s\n", oid))
 				d.SetId(oid)
 				return nil
 			}
@@ -227,18 +186,18 @@ func resourceapplicationpoolUpdate(d *schema.ResourceData, meta interface{}) err
 		// Reporting a failure
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				return fmt.Errorf("SOLIDServer - Unable to update application pool: %s (%s)", d.Get("name").(string), errMsg)
+				return diag.Errorf("Unable to update application pool: %s (%s)", d.Get("name").(string), errMsg)
 			}
 		}
 
-		return fmt.Errorf("SOLIDServer - Unable to update application pool: %s\n", d.Get("name").(string))
+		return diag.Errorf("Unable to update application pool: %s\n", d.Get("name").(string))
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourceapplicationpoolDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceapplicationpoolDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -247,7 +206,7 @@ func resourceapplicationpoolDelete(d *schema.ResourceData, meta interface{}) err
 
 	if s.Version < 710 {
 		// Reporting a failure
-		return fmt.Errorf("SOLIDServer - Object not supported in this SOLIDserver version")
+		return diag.Errorf("Object not supported in this SOLIDserver version")
 	}
 
 	// Sending the deletion request
@@ -262,15 +221,15 @@ func resourceapplicationpoolDelete(d *schema.ResourceData, meta interface{}) err
 			// Reporting a failure
 			if len(buf) > 0 {
 				if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-					return fmt.Errorf("SOLIDServer - Unable to delete application pool: %s (%s)", d.Get("name").(string), errMsg)
+					return diag.Errorf("Unable to delete application pool: %s (%s)", d.Get("name").(string), errMsg)
 				}
 			}
 
-			return fmt.Errorf("SOLIDServer - Unable to delete application pool: %s", d.Get("name").(string))
+			return diag.Errorf("Unable to delete application pool: %s", d.Get("name").(string))
 		}
 
 		// Log deletion
-		log.Printf("[DEBUG] SOLIDServer - Deleted application (oid) pool: %s\n", d.Id())
+		tflog.Debug(ctx, fmt.Sprintf("Deleted application (oid) pool: %s\n", d.Id()))
 
 		// Unset local ID
 		d.SetId("")
@@ -280,10 +239,10 @@ func resourceapplicationpoolDelete(d *schema.ResourceData, meta interface{}) err
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourceapplicationpoolRead(d *schema.ResourceData, meta interface{}) error {
+func resourceapplicationpoolRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -292,7 +251,7 @@ func resourceapplicationpoolRead(d *schema.ResourceData, meta interface{}) error
 
 	if s.Version < 710 {
 		// Reporting a failure
-		return fmt.Errorf("SOLIDServer - Object not supported in this SOLIDserver version")
+		return diag.Errorf("Object not supported in this SOLIDserver version")
 	}
 
 	// Sending the read request
@@ -331,24 +290,24 @@ func resourceapplicationpoolRead(d *schema.ResourceData, meta interface{}) error
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
 				// Log the error
-				log.Printf("[DEBUG] SOLIDServer - Unable to find application pool: %s (%s)\n", d.Get("name"), errMsg)
+				tflog.Debug(ctx, fmt.Sprintf("Unable to find application pool: %s (%s)\n", d.Get("name"), errMsg))
 			}
 		} else {
 			// Log the error
-			log.Printf("[DEBUG] SOLIDServer - Unable to find application pool (oid): %s\n", d.Id())
+			tflog.Debug(ctx, fmt.Sprintf("Unable to find application pool (oid): %s\n", d.Id()))
 		}
 
 		// Do not unset the local ID to avoid inconsistency
 
 		// Reporting a failure
-		return fmt.Errorf("SOLIDServer - Unable to find application pool: %s\n", d.Get("name").(string))
+		return diag.Errorf("Unable to find application pool: %s\n", d.Get("name").(string))
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourceapplicationpoolImportState(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+func resourceapplicationpoolImportState(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -397,10 +356,10 @@ func resourceapplicationpoolImportState(d *schema.ResourceData, meta interface{}
 
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				log.Printf("[DEBUG] SOLIDServer - Unable to import application pool (oid): %s (%s)\n", d.Id(), errMsg)
+				tflog.Debug(ctx, fmt.Sprintf("Unable to import application pool (oid): %s (%s)\n", d.Id(), errMsg))
 			}
 		} else {
-			log.Printf("[DEBUG] SOLIDServer - Unable to find and import application pool (oid): %s\n", d.Id())
+			tflog.Debug(ctx, fmt.Sprintf("Unable to find and import application pool (oid): %s\n", d.Id()))
 		}
 
 		// Reporting a failure

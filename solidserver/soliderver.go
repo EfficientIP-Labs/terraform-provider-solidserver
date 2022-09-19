@@ -1,18 +1,21 @@
 package solidserver
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/parnurzeal/gorequest"
 	"io/ioutil"
-	"log"
 	"math/rand"
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -43,6 +46,7 @@ const regexpHostname = `^(([a-z0-9]|[a-z0-9][a-z0-9\-]*[a-z0-9])\.)*([a-z0-9]|[a
 const regexpNetworkAcl = `^!?(([0-9]{1,3})\.){3}[0-9]{1,3}/[0-9]{1,2}$`
 
 type SOLIDserver struct {
+	Ctx                      context.Context
 	Host                     string
 	Username                 string
 	Password                 string
@@ -53,8 +57,9 @@ type SOLIDserver struct {
 	Authenticated            bool
 }
 
-func NewSOLIDserver(host string, username string, password string, sslverify bool, certsfile string, version string) (*SOLIDserver, error) {
+func NewSOLIDserver(ctx context.Context, host string, username string, password string, sslverify bool, certsfile string, version string) (*SOLIDserver, diag.Diagnostics) {
 	s := &SOLIDserver{
+		Ctx:                      ctx,
 		Host:                     host,
 		Username:                 username,
 		Password:                 password,
@@ -87,24 +92,25 @@ func SubmitRequest(s *SOLIDserver, apiclient *gorequest.SuperAgent, method strin
 
 	if s.AdditionalTrustCertsFile != "" {
 		certs, readErr := ioutil.ReadFile(s.AdditionalTrustCertsFile)
-		log.Printf("[DEBUG] SOLIDServer - Certificates = %s\n", certs)
+		tflog.Debug(s.Ctx, fmt.Sprintf("Certificates = %s\n", certs))
 
 		if readErr != nil {
-			log.Fatalf("[ERROR] SOLIDServer - Failed to append %q to RootCAs: %v\n", s.AdditionalTrustCertsFile, readErr)
+			tflog.Error(s.Ctx, fmt.Sprintf("Failed to append %q to RootCAs: %v\n", s.AdditionalTrustCertsFile, readErr))
+			os.Exit(1)
 		}
 
-		log.Printf("[DEBUG] SOLIDServer - Cert Subjects Before Append = %d\n", len(rootCAs.Subjects()))
+		tflog.Debug(s.Ctx, fmt.Sprintf("Cert Subjects Before Append = %d\n", len(rootCAs.Subjects())))
 
 		if ok := rootCAs.AppendCertsFromPEM(certs); !ok {
-			log.Printf("[DEBUG] SOLIDServer - No certs appended, using system certs only\n")
+			tflog.Debug(s.Ctx, fmt.Sprintf("No certs appended, using system certs only\n"))
 		}
 
-		log.Printf("[DEBUG] SOLIDServer - Cert Subjects After Append = %d\n", len(rootCAs.Subjects()))
+		tflog.Debug(s.Ctx, fmt.Sprintf("Cert Subjects After Append = %d\n", len(rootCAs.Subjects())))
 	}
 
 	t := httpRequestTimings[method]
 
-	log.Printf("[DEBUG] SOLIDServer - Timings for method '%s' : {%v}\n", method, t)
+	tflog.Debug(s.Ctx, fmt.Sprintf("Timings for method '%s' : {%v}\n", method, t))
 
 	apiclient.Timeout(time.Duration(t.sTimeout) * time.Second)
 
@@ -134,11 +140,11 @@ KeepTrying:
 			return resp, body, nil
 		}
 
-		log.Printf("[DEBUG] SOLIDServer - '%s' API request '%s' failed with errors.\n", method, requestUrl)
+		tflog.Debug(s.Ctx, fmt.Sprintf("'%s' API request '%s' failed with errors.\n", method, requestUrl))
 
 		for _, err := range errs {
 			if err, ok := err.(net.Error); ok && err.Timeout() {
-				log.Printf("[DEBUG] SOLIDServer - Timeout Retry (%d/%d)\n", retryCount+1, t.maxTry)
+				tflog.Debug(s.Ctx, fmt.Sprintf("Timeout Retry (%d/%d)\n", retryCount+1, t.maxTry))
 				retryCount++
 				continue KeepTrying
 			}
@@ -150,7 +156,7 @@ KeepTrying:
 	return nil, "", fmt.Errorf("Error '%s' API request '%s' : timeout retry count exceeded (maxTry = %d) !\n", method, requestUrl, t.maxTry)
 }
 
-func (s *SOLIDserver) GetVersion(version string) error {
+func (s *SOLIDserver) GetVersion(version string) diag.Diagnostics {
 
 	apiclient := gorequest.New()
 
@@ -164,7 +170,7 @@ func (s *SOLIDserver) GetVersion(version string) error {
 		json.Unmarshal([]byte(body), &buf)
 
 		if rversion, rversionExist := buf[0]["member_version"].(string); rversionExist {
-			log.Printf("[DEBUG] SOLIDServer - Version: %s\n", rversion)
+			tflog.Debug(s.Ctx, fmt.Sprintf("Version: %s\n", rversion))
 
 			StrVersion := strings.Split(rversion, ".")
 
@@ -183,7 +189,7 @@ func (s *SOLIDserver) GetVersion(version string) error {
 				s.Version = s.Version * 10
 			}
 
-			log.Printf("[DEBUG] SOLIDServer - server version retrieved from remote SOLIDserver: %d\n", s.Version)
+			tflog.Debug(s.Ctx, fmt.Sprintf("server version retrieved from remote SOLIDserver: %d\n", s.Version))
 
 			return nil
 		}
@@ -201,12 +207,12 @@ func (s *SOLIDserver) GetVersion(version string) error {
 			}
 		}
 
-		log.Printf("[DEBUG] SOLIDServer - server version retrived from local provider parameter: %d\n", s.Version)
+		tflog.Debug(s.Ctx, fmt.Sprintf("server version retrived from local provider parameter: %d\n", s.Version))
 
 		return nil
 	}
 
-	return fmt.Errorf("SOLIDServer - Error retrieving SOLIDserver Version (No Answer)\n")
+	return diag.Errorf("Error retrieving SOLIDserver Version (No Answer)\n")
 }
 
 func (s *SOLIDserver) Request(method string, service string, parameters *url.Values) (*http.Response, string, error) {
@@ -229,7 +235,7 @@ func (s *SOLIDserver) Request(method string, service string, parameters *url.Val
 	}
 
 	if len(body) > 0 && body[0] == '{' && body[len(body)-1] == '}' {
-		log.Printf("[DEBUG] Repacking HTTP JSON Body\n")
+		tflog.Debug(s.Ctx, fmt.Sprintf("Repacking HTTP JSON Body\n"))
 		body = "[" + body + "]"
 	}
 

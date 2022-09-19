@@ -1,27 +1,27 @@
 package solidserver
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"math/rand"
 	"net/url"
 	"strconv"
 	"time"
-
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
 
 func resourceipsubnet() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceipsubnetCreate,
-		Read:   resourceipsubnetRead,
-		Update: resourceipsubnetUpdate,
-		Delete: resourceipsubnetDelete,
-		Exists: resourceipsubnetExists,
+		CreateContext: resourceipsubnetCreate,
+		ReadContext:   resourceipsubnetRead,
+		UpdateContext: resourceipsubnetUpdate,
+		DeleteContext: resourceipsubnetDelete,
 		Importer: &schema.ResourceImporter{
-			State: resourceipsubnetImportState,
+			StateContext: resourceipsubnetImportState,
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -115,45 +115,7 @@ func resourceipsubnet() *schema.Resource {
 	}
 }
 
-func resourceipsubnetExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	s := meta.(*SOLIDserver)
-
-	// Building parameters
-	parameters := url.Values{}
-	parameters.Add("subnet_id", d.Id())
-
-	log.Printf("[DEBUG] Checking existence of IP subnet (oid): %s\n", d.Id())
-
-	// Sending the read request
-	resp, body, err := s.Request("get", "rest/ip_block_subnet_info", &parameters)
-
-	if err == nil {
-		var buf [](map[string]interface{})
-		json.Unmarshal([]byte(body), &buf)
-
-		// Checking the answer
-		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
-			return true, nil
-		}
-
-		if len(buf) > 0 {
-			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				// Log the error
-				log.Printf("[DEBUG] SOLIDServer - Unable to find IP subnet (oid): %s (%s)\n", d.Id(), errMsg)
-			}
-		} else {
-			// Log the error
-			log.Printf("[DEBUG] SOLIDServer - Unable to find IP subnet (oid): %s\n", d.Id())
-		}
-
-		// Unset local ID
-		d.SetId("")
-	}
-
-	return false, err
-}
-
-func resourceipsubnetCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceipsubnetCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	blockInfo := make(map[string]interface{})
 	s := meta.(*SOLIDserver)
 	var gateway string = ""
@@ -162,7 +124,7 @@ func resourceipsubnetCreate(d *schema.ResourceData, meta interface{}) error {
 	siteID, siteErr := ipsiteidbyname(d.Get("space").(string), meta)
 	if siteErr != nil {
 		// Reporting a failure
-		return siteErr
+		return diag.FromErr(siteErr)
 	}
 
 	// If a block is specified, look for free IP subnet within this block
@@ -174,7 +136,7 @@ func resourceipsubnetCreate(d *schema.ResourceData, meta interface{}) error {
 
 		if blockErr != nil {
 			// Reporting a failure
-			return blockErr
+			return diag.FromErr(blockErr)
 		}
 	} else {
 		// Otherwise, set an empty blockInfo's ID by default
@@ -182,7 +144,7 @@ func resourceipsubnetCreate(d *schema.ResourceData, meta interface{}) error {
 
 		// However, we can't create a block as a terminal subnet
 		if d.Get("terminal").(bool) {
-			return fmt.Errorf("SOLIDServer - Can't create a terminal IP block subnet: %s", d.Get("name").(string))
+			return diag.Errorf("Can't create a terminal IP block subnet: %s", d.Get("name").(string))
 		}
 	}
 
@@ -190,7 +152,7 @@ func resourceipsubnetCreate(d *schema.ResourceData, meta interface{}) error {
 
 	if subnetErr != nil {
 		// Reporting a failure
-		return subnetErr
+		return diag.FromErr(subnetErr)
 	}
 
 	for i := 0; i < len(subnetAddresses); i++ {
@@ -232,7 +194,7 @@ func resourceipsubnetCreate(d *schema.ResourceData, meta interface{}) error {
 			}
 
 			classParameters.Add("gateway", gateway)
-			log.Printf("[DEBUG] SOLIDServer - Subnet computed gateway: %s\n", gateway)
+			tflog.Debug(ctx, fmt.Sprintf("Subnet computed gateway: %s\n", gateway))
 		}
 
 		for k, v := range d.Get("class_parameters").(map[string]interface{}) {
@@ -256,7 +218,7 @@ func resourceipsubnetCreate(d *schema.ResourceData, meta interface{}) error {
 			// Checking the answer
 			if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
 				if oid, oidExist := buf[0]["ret_oid"].(string); oidExist {
-					log.Printf("[DEBUG] SOLIDServer - Created IP subnet (oid): %s\n", oid)
+					tflog.Debug(ctx, fmt.Sprintf("Created IP subnet (oid): %s\n", oid))
 					d.SetId(oid)
 					d.Set("prefix", prefix)
 					d.Set("address", hexiptoip(subnetAddresses[i]))
@@ -269,25 +231,25 @@ func resourceipsubnetCreate(d *schema.ResourceData, meta interface{}) error {
 			} else {
 				if len(buf) > 0 {
 					if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-						log.Printf("[DEBUG] SOLIDServer - Failed IP subnet registration for IP subnet: %s with prefix: %s (%s)\n", d.Get("name").(string), prefix, errMsg)
+						tflog.Debug(ctx, fmt.Sprintf("Failed IP subnet registration for IP subnet: %s with prefix: %s (%s)\n", d.Get("name").(string), prefix, errMsg))
 					} else {
-						log.Printf("[DEBUG] SOLIDServer - Failed IP subnet registration for IP subnet: %s with prefix: %s\n", d.Get("name").(string), prefix)
+						tflog.Debug(ctx, fmt.Sprintf("Failed IP subnet registration for IP subnet: %s with prefix: %s\n", d.Get("name").(string), prefix))
 					}
 				} else {
-					log.Printf("[DEBUG] SOLIDServer - Failed IP subnet registration for IP subnet: %s with prefix: %s\n", d.Get("name").(string), prefix)
+					tflog.Debug(ctx, fmt.Sprintf("Failed IP subnet registration for IP subnet: %s with prefix: %s\n", d.Get("name").(string), prefix))
 				}
 			}
 		} else {
 			// Reporting a failure
-			return err
+			return diag.FromErr(err)
 		}
 	}
 
 	// Reporting a failure
-	return fmt.Errorf("SOLIDServer - Unable to create IP subnet: %s, unable to find a suitable prefix\n", d.Get("name").(string))
+	return diag.Errorf("Unable to create IP subnet: %s, unable to find a suitable prefix\n", d.Get("name").(string))
 }
 
-func resourceipsubnetUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceipsubnetUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -311,7 +273,7 @@ func resourceipsubnetUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	if goffset != 0 {
 		classParameters.Add("gateway", d.Get("gateway").(string))
-		log.Printf("[DEBUG] SOLIDServer - Subnet updated gateway: %s\n", d.Get("gateway").(string))
+		tflog.Debug(ctx, fmt.Sprintf("Subnet updated gateway: %s\n", d.Get("gateway").(string)))
 	}
 
 	for k, v := range d.Get("class_parameters").(map[string]interface{}) {
@@ -329,7 +291,7 @@ func resourceipsubnetUpdate(d *schema.ResourceData, meta interface{}) error {
 		// Checking the answer
 		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
 			if oid, oidExist := buf[0]["ret_oid"].(string); oidExist {
-				log.Printf("[DEBUG] SOLIDServer - Updated IP subnet (oid): %s\n", oid)
+				tflog.Debug(ctx, fmt.Sprintf("Updated IP subnet (oid): %s\n", oid))
 				d.SetId(oid)
 				return nil
 			}
@@ -338,18 +300,18 @@ func resourceipsubnetUpdate(d *schema.ResourceData, meta interface{}) error {
 		// Reporting a failure
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				return fmt.Errorf("SOLIDServer - Unable to update IP subnet: %s (%s)", d.Get("name").(string), errMsg)
+				return diag.Errorf("Unable to update IP subnet: %s (%s)", d.Get("name").(string), errMsg)
 			}
 		}
 
-		return fmt.Errorf("SOLIDServer - Unable to update IP subnet: %s\n", d.Get("name").(string))
+		return diag.Errorf("Unable to update IP subnet: %s\n", d.Get("name").(string))
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourceipsubnetgatewayDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceipsubnetgatewayDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	if d.Get("gateway") != nil {
@@ -370,34 +332,34 @@ func resourceipsubnetgatewayDelete(d *schema.ResourceData, meta interface{}) err
 				// Reporting a failure
 				if len(buf) > 0 {
 					if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-						log.Printf("[DEBUG] SOLIDServer - Unable to delete IP subnet's gateway: %s (%s)", d.Get("gateway").(string), errMsg)
+						tflog.Debug(ctx, fmt.Sprintf("Unable to delete IP subnet's gateway: %s (%s)", d.Get("gateway").(string), errMsg))
 					}
 				}
 
-				log.Printf("[DEBUG] SOLIDServer - Unable to delete IP subnet's gateway: %s", d.Get("gateway").(string))
+				tflog.Debug(ctx, fmt.Sprintf("Unable to delete IP subnet's gateway: %s", d.Get("gateway").(string)))
 			}
 
 			// Log deletion
-			log.Printf("[DEBUG] SOLIDServer - Deleted IP subnet's gateway: %s\n", d.Get("gateway").(string))
+			tflog.Debug(ctx, fmt.Sprintf("Deleted IP subnet's gateway: %s\n", d.Get("gateway").(string)))
 
 			// Reporting a success
 			return nil
 		}
 
 		// Reporting a failure
-		return err
+		return diag.FromErr(err)
 	}
 
 	// Reporting a success (nothing done)
 	return nil
 }
 
-func resourceipsubnetDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceipsubnetDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Delete related resources such as the Gateway
 	if d.Get("gateway_offset") != 0 {
-		resourceipsubnetgatewayDelete(d, meta)
+		resourceipsubnetgatewayDelete(ctx, d, meta)
 	}
 
 	// Building parameters
@@ -416,15 +378,15 @@ func resourceipsubnetDelete(d *schema.ResourceData, meta interface{}) error {
 			// Reporting a failure
 			if len(buf) > 0 {
 				if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-					return fmt.Errorf("SOLIDServer - Unable to delete IP subnet : %s (%s)", d.Get("name").(string), errMsg)
+					return diag.Errorf("Unable to delete IP subnet : %s (%s)", d.Get("name").(string), errMsg)
 				}
 			}
 
-			return fmt.Errorf("SOLIDServer - Unable to delete IP subnet : %s", d.Get("name").(string))
+			return diag.Errorf("Unable to delete IP subnet : %s", d.Get("name").(string))
 		}
 
 		// Log deletion
-		log.Printf("[DEBUG] SOLIDServer - Deleted IP subnet (oid): %s\n", d.Id())
+		tflog.Debug(ctx, fmt.Sprintf("Deleted IP subnet (oid): %s\n", d.Id()))
 
 		// Unset local ID
 		d.SetId("")
@@ -434,10 +396,10 @@ func resourceipsubnetDelete(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourceipsubnetRead(d *schema.ResourceData, meta interface{}) error {
+func resourceipsubnetRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -489,24 +451,24 @@ func resourceipsubnetRead(d *schema.ResourceData, meta interface{}) error {
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
 				// Log the error
-				log.Printf("[DEBUG] SOLIDServer - Unable to find IP subnet: %s (%s)\n", d.Get("name"), errMsg)
+				tflog.Debug(ctx, fmt.Sprintf("Unable to find IP subnet: %s (%s)\n", d.Get("name"), errMsg))
 			}
 		} else {
 			// Log the error
-			log.Printf("[DEBUG] SOLIDServer - Unable to find IP subnet (oid): %s\n", d.Id())
+			tflog.Debug(ctx, fmt.Sprintf("Unable to find IP subnet (oid): %s\n", d.Id()))
 		}
 
 		// Do not unset the local ID to avoid inconsistency
 
 		// Reporting a failure
-		return fmt.Errorf("SOLIDServer - Unable to find IP subnet: %s\n", d.Get("name").(string))
+		return diag.Errorf("Unable to find IP subnet: %s\n", d.Get("name").(string))
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourceipsubnetImportState(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+func resourceipsubnetImportState(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -565,11 +527,11 @@ func resourceipsubnetImportState(d *schema.ResourceData, meta interface{}) ([]*s
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
 				// Log the error
-				log.Printf("[DEBUG] SOLIDServer - Unable to import IP subnet (oid): %s (%s)\n", d.Id(), errMsg)
+				tflog.Debug(ctx, fmt.Sprintf("Unable to import IP subnet (oid): %s (%s)\n", d.Id(), errMsg))
 			}
 		} else {
 			// Log the error
-			log.Printf("[DEBUG] SOLIDServer - Unable to find and import IP subnet (oid): %s\n", d.Id())
+			tflog.Debug(ctx, fmt.Sprintf("Unable to find and import IP subnet (oid): %s\n", d.Id()))
 		}
 
 		// Reporting a failure

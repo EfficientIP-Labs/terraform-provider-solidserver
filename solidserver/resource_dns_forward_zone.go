@@ -1,24 +1,25 @@
 package solidserver
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"log"
 	"net/url"
 	"strings"
 )
 
 func resourcednsforwardzone() *schema.Resource {
 	return &schema.Resource{
-		Create: resourcednsforwardzoneCreate,
-		Read:   resourcednsforwardzoneRead,
-		Update: resourcednsforwardzoneUpdate,
-		Delete: resourcednsforwardzoneDelete,
-		Exists: resourcednsforwardzoneExists,
+		CreateContext: resourcednsforwardzoneCreate,
+		ReadContext:   resourcednsforwardzoneRead,
+		UpdateContext: resourcednsforwardzoneUpdate,
+		DeleteContext: resourcednsforwardzoneDelete,
 		Importer: &schema.ResourceImporter{
-			State: resourcednsforwardzoneImportState,
+			StateContext: resourcednsforwardzoneImportState,
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -76,44 +77,7 @@ func resourcednsforwardzone() *schema.Resource {
 	}
 }
 
-func resourcednsforwardzoneExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	s := meta.(*SOLIDserver)
-
-	// Building parameters
-	parameters := url.Values{}
-	parameters.Add("dnszone_id", d.Id())
-
-	log.Printf("[DEBUG] Checking existence of DNS forward zone (oid): %s\n", d.Id())
-
-	// Sending the read request
-	resp, body, err := s.Request("get", "rest/dns_zone_info", &parameters)
-
-	if err == nil {
-		var buf [](map[string]interface{})
-		json.Unmarshal([]byte(body), &buf)
-
-		// Checking the answer
-		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
-			return true, nil
-		}
-
-		if len(buf) > 0 {
-			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				log.Printf("[DEBUG] SOLIDServer - Unable to find DNS forward zone (oid): %s (%s)\n", d.Id(), errMsg)
-			}
-		} else {
-			log.Printf("[DEBUG] SOLIDServer - Unable to find DNS forward zone (oid): %s\n", d.Id())
-		}
-
-		// Unset local ID
-		d.SetId("")
-	}
-
-	// Reporting a failure
-	return false, err
-}
-
-func resourcednsforwardzoneCreate(d *schema.ResourceData, meta interface{}) error {
+func resourcednsforwardzoneCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -151,7 +115,7 @@ func resourcednsforwardzoneCreate(d *schema.ResourceData, meta interface{}) erro
 		// Checking the answer
 		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
 			if oid, oidExist := buf[0]["ret_oid"].(string); oidExist {
-				log.Printf("[DEBUG] SOLIDServer - Created DNS forward zone (oid): %s\n", oid)
+				tflog.Debug(ctx, fmt.Sprintf("Created DNS forward zone (oid): %s\n", oid))
 				d.SetId(oid)
 				return nil
 			}
@@ -160,18 +124,18 @@ func resourcednsforwardzoneCreate(d *schema.ResourceData, meta interface{}) erro
 		// Reporting a failure
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				return fmt.Errorf("SOLIDServer - Unable to create DNS forward zone: %s (%s)", d.Get("name").(string), errMsg)
+				return diag.Errorf("Unable to create DNS forward zone: %s (%s)", d.Get("name").(string), errMsg)
 			}
 		}
 
-		return fmt.Errorf("SOLIDServer - Unable to create DNS forward zone: %s\n", d.Get("name").(string))
+		return diag.Errorf("Unable to create DNS forward zone: %s\n", d.Get("name").(string))
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourcednsforwardzoneUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourcednsforwardzoneUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -204,7 +168,7 @@ func resourcednsforwardzoneUpdate(d *schema.ResourceData, meta interface{}) erro
 		// Checking the answer
 		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
 			if oid, oidExist := buf[0]["ret_oid"].(string); oidExist {
-				log.Printf("[DEBUG] SOLIDServer - Updated DNS forward zone (oid): %s\n", oid)
+				tflog.Debug(ctx, fmt.Sprintf("Updated DNS forward zone (oid): %s\n", oid))
 				d.SetId(oid)
 				return nil
 			}
@@ -213,18 +177,18 @@ func resourcednsforwardzoneUpdate(d *schema.ResourceData, meta interface{}) erro
 		// Reporting a failure
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				return fmt.Errorf("SOLIDServer - Unable to update DNS forward zone: %s (%s)", d.Get("name").(string), errMsg)
+				return diag.Errorf("Unable to update DNS forward zone: %s (%s)", d.Get("name").(string), errMsg)
 			}
 		}
 
-		return fmt.Errorf("SOLIDServer - Unable to update DNS forward zone: %s\n", d.Get("name").(string))
+		return diag.Errorf("Unable to update DNS forward zone: %s\n", d.Get("name").(string))
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourcednsforwardzoneDelete(d *schema.ResourceData, meta interface{}) error {
+func resourcednsforwardzoneDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -243,15 +207,15 @@ func resourcednsforwardzoneDelete(d *schema.ResourceData, meta interface{}) erro
 			// Reporting a failure
 			if len(buf) > 0 {
 				if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-					return fmt.Errorf("SOLIDServer - Unable to delete DNS forward zone: %s (%s)", d.Get("name").(string), errMsg)
+					return diag.Errorf("Unable to delete DNS forward zone: %s (%s)", d.Get("name").(string), errMsg)
 				}
 			}
 
-			return fmt.Errorf("SOLIDServer - Unable to delete DNS forward zone: %s", d.Get("name").(string))
+			return diag.Errorf("Unable to delete DNS forward zone: %s", d.Get("name").(string))
 		}
 
 		// Log deletion
-		log.Printf("[DEBUG] SOLIDServer - Deleted DNS forward zone (oid): %s\n", d.Id())
+		tflog.Debug(ctx, fmt.Sprintf("Deleted DNS forward zone (oid): %s\n", d.Id()))
 
 		// Unset local ID
 		d.SetId("")
@@ -261,10 +225,10 @@ func resourcednsforwardzoneDelete(d *schema.ResourceData, meta interface{}) erro
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourcednsforwardzoneRead(d *schema.ResourceData, meta interface{}) error {
+func resourcednsforwardzoneRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -323,24 +287,24 @@ func resourcednsforwardzoneRead(d *schema.ResourceData, meta interface{}) error 
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
 				// Log the error
-				log.Printf("[DEBUG] SOLIDServer - Unable to find DNS forward zone: %s (%s)\n", d.Get("name"), errMsg)
+				tflog.Debug(ctx, fmt.Sprintf("Unable to find DNS forward zone: %s (%s)\n", d.Get("name"), errMsg))
 			}
 		} else {
 			// Log the error
-			log.Printf("[DEBUG] SOLIDServer - Unable to find DNS forward zone (oid): %s\n", d.Id())
+			tflog.Debug(ctx, fmt.Sprintf("Unable to find DNS forward zone (oid): %s\n", d.Id()))
 		}
 
 		// Do not unset the local ID to avoid inconsistency
 
 		// Reporting a failure
-		return fmt.Errorf("SOLIDServer - Unable to find DNS forward zone: %s\n", d.Get("name").(string))
+		return diag.Errorf("Unable to find DNS forward zone: %s\n", d.Get("name").(string))
 	}
 
 	// Reporting a failure
-	return err
+	return diag.FromErr(err)
 }
 
-func resourcednsforwardzoneImportState(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+func resourcednsforwardzoneImportState(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
 	s := meta.(*SOLIDserver)
 
 	// Building parameters
@@ -399,10 +363,10 @@ func resourcednsforwardzoneImportState(d *schema.ResourceData, meta interface{})
 
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				log.Printf("[DEBUG] SOLIDServer - Unable to import DNS forward zone (oid): %s (%s)\n", d.Id(), errMsg)
+				tflog.Debug(ctx, fmt.Sprintf("Unable to import DNS forward zone (oid): %s (%s)\n", d.Id(), errMsg))
 			}
 		} else {
-			log.Printf("[DEBUG] SOLIDServer - Unable to find and import DNS forward zone (oid): %s\n", d.Id())
+			tflog.Debug(ctx, fmt.Sprintf("Unable to find and import DNS forward zone (oid): %s\n", d.Id()))
 		}
 
 		// Reporting a failure
