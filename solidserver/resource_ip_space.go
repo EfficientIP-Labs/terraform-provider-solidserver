@@ -20,6 +20,7 @@ func resourceipspace() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceipspaceImportState,
 		},
+
 		Description: heredoc.Doc(`
 			The space is the highest level in the SOLIDserver's IPAM module organization,
 			the entry point of any IPv4 or IPv6 addressing plan.

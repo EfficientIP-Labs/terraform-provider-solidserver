@@ -14,6 +14,12 @@ func dataSourceipspace() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourceipspaceRead,
 
+		Description: heredoc.Doc(`
+			The space is the highest level in the SOLIDserver's IPAM module organization,
+			the entry point of any IPv4 or IPv6 addressing plan.
+			It allows to manage unique ranges of IP addresses.
+		`),
+
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
