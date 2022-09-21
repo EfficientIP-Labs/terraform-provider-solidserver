@@ -1,6 +1,9 @@
 SHELL := /bin/bash
 GO_FILES?=$(find . -name '*.go' |grep -v vendor)
 
+export GOBIN := ${PWD}/bin
+export PATH := $(GOBIN):$(PATH)
+
 # To provide the version use 'make release VERSION=1.1.1 GPGKEY=<example@efficientip.com>'
 ifdef VERSION
 	RELEASE := $(VERSION)
@@ -87,6 +90,9 @@ release:
 test: fmtcheck vet
 	go test -v ./... || exit 1
 
+doc: tools
+	@sh -c "'$(CURDIR)/scripts/gendoc.sh'"
+
 fmt:
 	gofmt -s -w ./*.go
 	gofmt -s -w ./solidserver/*.go
@@ -94,5 +100,11 @@ fmt:
 vet:
 	go vet -all ./solidserver
 
+tools:
+	@echo "Installing development tools"
+	go generate -tags tools tools/tools.go
+
 fmtcheck:
 	./scripts/gofmtcheck.sh
+
+.PHONY: tools

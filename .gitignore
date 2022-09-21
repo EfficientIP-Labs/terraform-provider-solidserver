@@ -9,6 +9,7 @@ _obj
 _tests
 _releases
 vendor
+bin
 
 # Architecture specific extensions/prefixes
 *.[568vq]
