@@ -11,6 +11,7 @@
   - [X] Implement support for diagnostics
   - [ ] Implement resource-Level and field-Level descriptions
   - [ ] Leverage new validation from schema.Schema.Computed - https://www.terraform.io/plugin/sdkv2/guides/v2-upgrade-guide#stronger-validation-for-helper-schema-schema-computed-fields
+- [ ] Fix DNZ Zone DataSource (DNS Server and View might be needed + filter zone having no parent (smart or standalone))
 - [ ] Implement binary generation for https://www.terraform.io/registry/providers/os-arch
 - [ ] Implement a new releaser https://goreleaser.com/install/
 - [ ] Implement support for RPZ Zone and RPZ rules
