@@ -54,7 +54,7 @@ func Provider() *schema.Provider {
 		},
 
 		DataSourcesMap: map[string]*schema.Resource{
-			"solidserver_ip_space":         dataSourceipspace(),
+			"ip_space":         dataSourceipspace(),
 			"solidserver_ip_subnet":        dataSourceipsubnet(),
 			"solidserver_ip_subnet_query":  dataSourceipsubnetquery(),
 			"solidserver_ip6_subnet":       dataSourceip6subnet(),
@@ -75,7 +75,7 @@ func Provider() *schema.Provider {
 		},
 
 		ResourcesMap: map[string]*schema.Resource{
-			"solidserver_ip_space":         resourceipspace(),
+			"ip_space":         resourceipspace(),
 			"solidserver_ip_subnet":        resourceipsubnet(),
 			"solidserver_ip6_subnet":       resourceip6subnet(),
 			"solidserver_ip_pool":          resourceippool(),
