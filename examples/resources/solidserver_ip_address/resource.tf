@@ -8,3 +8,13 @@ resource "solidserver_ip_address" "myFirstIPAddress" {
     interfaceid = "eni-d5b961d5"
   }
 }
+
+//Note: When using IP-MAC association, consider using the lifecycle property on the associated IP address for statefull management of the MAC address.
+resource "solidserver_ip_address" "myFirstIPAddress" {
+  space   = "${solidserver_ip_space.myFirstSpace.name}"
+  subnet  = "${solidserver_ip_subnet.myFirstIPSubnet.name}"
+  name    = "myfirstipaddress"
+  lifecycle {
+    ignore_changes = ["mac"]
+  }
+}
