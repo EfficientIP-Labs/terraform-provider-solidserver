@@ -9,7 +9,7 @@ resource "solidserver_ip_address" "myFirstIPAddress" {
   }
 }
 
-//Note: When using IP-MAC association, consider using the lifecycle property on the associated IP address for statefull management of the MAC address.
+// When using IP-MAC association, consider using the lifecycle property on the associated IP address for statefull management of the MAC address.
 resource "solidserver_ip_address" "myFirstIPAddress" {
   space   = "${solidserver_ip_space.myFirstSpace.name}"
   subnet  = "${solidserver_ip_subnet.myFirstIPSubnet.name}"
