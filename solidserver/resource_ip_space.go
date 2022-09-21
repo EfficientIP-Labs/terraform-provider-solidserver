@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/MakeNowJust/heredoc/v2"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -19,6 +20,11 @@ func resourceipspace() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceipspaceImportState,
 		},
+		Description: heredoc.Doc(`
+			The space is the highest level in the SOLIDserver's IPAM module organization,
+			the entry point of any IPv4 or IPv6 addressing plan.
+			It allows to manage unique ranges of IP addresses.
+		`),
 
 		Schema: map[string]*schema.Schema{
 			"name": {
