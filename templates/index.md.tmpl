@@ -1,0 +1,19 @@
+---
+layout: ""
+page_title: "Provider: {{.RenderedProviderName}}"
+description: |-
+  The {{.RenderedProviderName}} provider exposes resources for interacting with the EfficientIP's
+  {{.RenderedProviderName}} [{{.RenderedProviderName}}](https://www.efficientip.com/products/solidserver/) API.
+---
+
+# {{.RenderedProviderName}} Provider
+
+The {{.RenderedProviderName}} provider exposes resources for interacting with the EfficientIP's
+{{.RenderedProviderName}} [{{.RenderedProviderName}}](https://www.efficientip.com/products/solidserver/) API.
+It allows to manage supported resources through CRUD operations for efficient DDI orchestration.
+
+## Example Usage
+
+{{ tffile "examples/provider/provider.tf" }}
+
+{{ .SchemaMarkdown | trimspace }}
