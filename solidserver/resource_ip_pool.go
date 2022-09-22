@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/MakeNowJust/heredoc/v2"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -22,6 +23,12 @@ func resourceippool() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceippoolImportState,
 		},
+
+		Description: heredoc.Doc(`
+			IP Pools allow reserving IP addresses for specific usage such as: address provisioning, planning
+			or migrations. Pools can also be used to delegate one or several ranges of IP addresses to groups
+			of administrators or to restrict access to some users.
+		`),
 
 		Schema: map[string]*schema.Schema{
 			"space": {

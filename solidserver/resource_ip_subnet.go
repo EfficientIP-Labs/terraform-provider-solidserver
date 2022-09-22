@@ -26,9 +26,8 @@ func resourceipsubnet() *schema.Resource {
 		},
 
 		Description: heredoc.Doc(`
-			Within the IPAM hierarchy, subnetting is key to organize the network.
-			IP Subnets are managed as networks of two type: blocks and subnets.
-			Blocks reflect assigned IP ranges (RFC1918 or public prefixes).
+			IP Subnets are key to organize the network, Subnet can be blocks or subnets.
+			Blocks reflect the assigned IP ranges (RFC1918 or public prefixes).
 			Subnets reflect the internal sub-division of your network.
 		`),
 
