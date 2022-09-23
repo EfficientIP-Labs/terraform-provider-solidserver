@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/MakeNowJust/heredoc/v2"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -22,6 +23,11 @@ func resourceapplicationnode() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceapplicationnodeImportState,
 		},
+
+		Description: heredoc.Doc(`
+			Application Nodes allow to register application endpoints that are monitored by the GSLB DNS servers
+			associated with the application, in order to route related traffic according to the selected loadbalancing strategy.
+		`),
 
 		Schema: map[string]*schema.Schema{
 			"application": {
