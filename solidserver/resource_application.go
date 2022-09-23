@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/MakeNowJust/heredoc/v2"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -20,6 +21,11 @@ func resourceapplication() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceapplicationImportState,
 		},
+
+		Description: heredoc.Doc(`
+			Application allows to register applications that can be used to implement traffic policies in order
+			to optimize the routing of the associated traffic according to the selected loadbalancing strategy.
+		`),
 
 		Schema: map[string]*schema.Schema{
 			"name": {
