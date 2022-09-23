@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/MakeNowJust/heredoc/v2"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -19,6 +20,11 @@ func resourcecdb() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourcecdbImportState,
 		},
+
+		Description: heredoc.Doc(`
+			Custom DB allows to create and manage custom database(s) stored within SOLIDserver.
+			This custom databases can be leveraged within object classes and wizards in order to store custom meta-data.
+		`),
 
 		Schema: map[string]*schema.Schema{
 			"name": {

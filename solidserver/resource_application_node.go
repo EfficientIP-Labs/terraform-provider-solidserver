@@ -25,7 +25,7 @@ func resourceapplicationnode() *schema.Resource {
 		},
 
 		Description: heredoc.Doc(`
-			Application Nodes allow to register application endpoints that are monitored by the GSLB DNS servers
+			Application Nodes allow to create and manage application endpoints that are monitored by the GSLB DNS servers
 			associated with the application, in order to route related traffic according to the selected loadbalancing strategy.
 		`),
 

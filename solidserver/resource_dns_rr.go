@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/MakeNowJust/heredoc/v2"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -21,6 +22,10 @@ func resourcednsrr() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourcednsrrImportState,
 		},
+
+		Description: heredoc.Doc(`
+			DNS RR allows to create and manage DNS resource records of type A, AAAA, PTR, CNAME, DNAME, NS.
+		`),
 
 		Schema: map[string]*schema.Schema{
 			"dnsserver": {
@@ -51,7 +56,7 @@ func resourcednsrr() *schema.Resource {
 			},
 			"type": {
 				Type:         schema.TypeString,
-				Description:  "The type of the RR to create (Supported: A, AAAA, CNAME, TXT).",
+				Description:  "The type of the RR to create (Supported: A, AAAA, PTR, CNAME, DNAME and NS).",
 				ValidateFunc: resourcednsrrvalidatetype,
 				Required:     true,
 				ForceNew:     true,

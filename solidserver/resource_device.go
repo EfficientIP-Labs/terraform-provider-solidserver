@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/MakeNowJust/heredoc/v2"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -21,6 +22,11 @@ func resourcedevice() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourcedeviceImportState,
 		},
+
+		Description: heredoc.Doc(`
+			Device allows to create and manage network devices and link them with IP addresses.
+			It is pretty useful to link together the many IP addresses a device can rely on.
+		`),
 
 		Schema: map[string]*schema.Schema{
 			"name": {

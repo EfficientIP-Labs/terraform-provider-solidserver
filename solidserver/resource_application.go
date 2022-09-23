@@ -23,7 +23,7 @@ func resourceapplication() *schema.Resource {
 		},
 
 		Description: heredoc.Doc(`
-			Application allows to register applications that can be used to implement traffic policies in order
+			Application allows to create and manage applications that can be used to implement traffic policies in order
 			to optimize the routing of the associated traffic according to the selected loadbalancing strategy.
 		`),
 

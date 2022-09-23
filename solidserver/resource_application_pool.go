@@ -24,7 +24,7 @@ func resourceapplicationpool() *schema.Resource {
 		},
 
 		Description: heredoc.Doc(`
-			Application Pool allows to register a pool that implement a traffic policy.
+			Application Pool allows to create and manage a pool that implement a traffic policy.
 			Application Pools are groups of nodes serving the same application and monitored by the GSLB(s) DNS servers
 		`),
 
