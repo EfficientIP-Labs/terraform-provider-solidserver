@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/MakeNowJust/heredoc/v2"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -18,6 +19,12 @@ func resourceipmac() *schema.Resource {
 		CreateContext: resourceipmacCreate,
 		ReadContext:   resourceipmacRead,
 		DeleteContext: resourceipmacDelete,
+
+		Description: heredoc.Doc(`
+			IP MAC allows to map an IP address with a MAC address.
+			It does not reflect any object within SOLIDserver, it is useful when provisioning
+			IP addresses for VM(s) for which the MAC address is unknown until deployed.
+		`),
 
 		Schema: map[string]*schema.Schema{
 			"space": {
