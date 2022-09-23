@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/MakeNowJust/heredoc/v2"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -17,6 +18,11 @@ func resourceip6alias() *schema.Resource {
 		ReadContext:   resourceip6aliasRead,
 		//UpdateContext: resourceip6aliasUpdate,
 		DeleteContext: resourceip6aliasDelete,
+
+		Description: heredoc.Doc(`
+			IP aliases allows to register multiple names for a single IP address.
+			They are pretty useful to keep IPAM in sync with the DNS handling CNAME(s) from a single repository.
+		`),
 
 		Schema: map[string]*schema.Schema{
 			"space": {

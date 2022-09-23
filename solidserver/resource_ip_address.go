@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/MakeNowJust/heredoc/v2"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -22,6 +23,11 @@ func resourceipaddress() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceipaddressImportState,
 		},
+
+		Description: heredoc.Doc(`
+			IPv6 address object allows you to reserve IP resources for specific devices, apps or users.
+			More importantly it allows to store useful meta-data for both tracking and automation purposes.
+		`),
 
 		Schema: map[string]*schema.Schema{
 			"space": {
