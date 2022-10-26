@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/MakeNowJust/heredoc/v2"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -20,6 +21,10 @@ func resourcevlandomain() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourcevlandomainImportState,
 		},
+
+		Description: heredoc.Doc(`
+			VLAN Domain resource allows to create and manage VLAN and VxLAN domains.
+		`),
 
 		Schema: map[string]*schema.Schema{
 			"name": {

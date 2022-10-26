@@ -13,6 +13,10 @@ func dataSourceip6ptr() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourceip6ptrRead,
 
+		Description: heredoc.Doc(`
+			IPv6 PTR data-source allows to easily convert an IPv6 address into a DNS PTR format.
+		`),
+
 		Schema: map[string]*schema.Schema{
 			"address": {
 				Type:         schema.TypeString,

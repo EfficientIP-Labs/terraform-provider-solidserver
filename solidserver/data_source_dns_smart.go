@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/MakeNowJust/heredoc/v2"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -15,6 +16,11 @@ import (
 func dataSourcednssmart() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourcednssmartRead,
+
+		Description: heredoc.Doc(`
+			DNS SMART data-source allows to retrieve information about DNS SMART architectures.
+			SMART(s) are abstratc containers managing several DNS servers as a unique entity.
+		`),
 
 		Schema: map[string]*schema.Schema{
 			"name": {

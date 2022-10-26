@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/MakeNowJust/heredoc/v2"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -22,6 +23,11 @@ func resourcednssmart() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourcednssmartImportState,
 		},
+
+		Description: heredoc.Doc(`
+			DNS SMART resource allows to create and manage DNS SMART architectures,
+			SMART(s) are abstratc containers managing several DNS servers as a unique entity.
+		`),
 
 		Schema: map[string]*schema.Schema{
 			"name": {

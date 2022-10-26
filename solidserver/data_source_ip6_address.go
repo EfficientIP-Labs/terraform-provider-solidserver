@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/MakeNowJust/heredoc/v2"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -15,6 +16,10 @@ import (
 func dataSourceip6address() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourceip6addressRead,
+
+		Description: heredoc.Doc(`
+			IPv6 address data-source allows to retrieve information about reserved IPv6 addresses including meta-data.
+		`),
 
 		Schema: map[string]*schema.Schema{
 			"space": {

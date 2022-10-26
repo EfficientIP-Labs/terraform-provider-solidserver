@@ -24,7 +24,7 @@ func resourcedevice() *schema.Resource {
 		},
 
 		Description: heredoc.Doc(`
-			Device allows to create and manage network devices and link them with IP addresses.
+			Device resource allows to create and manage network devices and link them with IP addresses.
 			It is pretty useful to link together the many IP addresses a device can rely on.
 		`),
 

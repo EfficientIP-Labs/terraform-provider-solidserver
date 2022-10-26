@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/MakeNowJust/heredoc/v2"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -14,6 +15,10 @@ import (
 func dataSourceipsubnetquery() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourceipsubnetqueryRead,
+
+		Description: heredoc.Doc(`
+			IP subnet query data-source allows to retrieve information about the first IPv4 subnet matching given criterias, including its meta-data.
+		`),
 
 		Schema: map[string]*schema.Schema{
 			"query": {

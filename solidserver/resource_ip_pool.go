@@ -25,8 +25,8 @@ func resourceippool() *schema.Resource {
 		},
 
 		Description: heredoc.Doc(`
-			IP Pools allow reserving IP addresses for specific usage such as: address provisioning, planning
-			or migrations. Pools can also be used to delegate one or several ranges of IP addresses to groups
+			IP Pool resource allows to create and manage ranges of IP addresses for specific usage such as: provisioning,
+			planning or migrations. IP Pools can also be used to delegate one or several ranges of IPv6 addresses to groups
 			of administrators or to restrict access to some users.
 		`),
 

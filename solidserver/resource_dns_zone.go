@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/MakeNowJust/heredoc/v2"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -22,6 +23,10 @@ func resourcednszone() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourcednszoneImportState,
 		},
+
+		Description: heredoc.Doc(`
+			DNS Zone resource allows to create and configure DNS zones.
+		`),
 
 		Schema: map[string]*schema.Schema{
 			"dnsserver": {

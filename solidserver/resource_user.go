@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/MakeNowJust/heredoc/v2"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -20,6 +21,11 @@ func resourceuser() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceuserImportState,
 		},
+
+		Description: heredoc.Doc(`
+			User resource allows to creat and manage local SOLIDserver users who
+			can connect through Web GUI and use API(s).
+		`),
 
 		Schema: map[string]*schema.Schema{
 			"login": {

@@ -28,8 +28,8 @@ func resourcednsserver() *schema.Resource {
 		},
 
 		Description: heredoc.Doc(`
-			DNS Server allows to register and configure DNS servers.
-			Most of the time, they are just added to a SMART, however they can remain standalone.
+			DNS Server resource allows to register and configure DNS servers.
+			Most of the time, they are just added to a SMART, but they can remain standalone.
 		`),
 
 		Schema: map[string]*schema.Schema{

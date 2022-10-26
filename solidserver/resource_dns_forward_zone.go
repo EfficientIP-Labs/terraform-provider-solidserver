@@ -24,7 +24,7 @@ func resourcednsforwardzone() *schema.Resource {
 		},
 
 		Description: heredoc.Doc(`
-			DNS Forward Zone allows to create and manage DNS forward zones.
+			DNS Forward Zone resource allows to create and manage DNS forward zones.
 		`),
 
 		Schema: map[string]*schema.Schema{

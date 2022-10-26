@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/MakeNowJust/heredoc/v2"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -14,6 +15,12 @@ import (
 func dataSourceipsubnet() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourceipsubnetRead,
+
+		Description: heredoc.Doc(`
+			IP subnet data-source allows to retrieve information about reserved IPv4 subnets, including meta-data.
+			IP Subnet are key to organize the IP space, they can be blocks or subnets. Blocks reflect assigned IP
+			ranges (RFC1918 or public prefixes). Subnets reflect the internal sub-division of your network.
+		`),
 
 		Schema: map[string]*schema.Schema{
 			"name": {

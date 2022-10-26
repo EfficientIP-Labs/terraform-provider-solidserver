@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/MakeNowJust/heredoc/v2"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -15,6 +16,11 @@ import (
 func dataSourcednsserver() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourcednsserverRead,
+
+		Description: heredoc.Doc(`
+			DNS Server data-source allows to retrieve information about DNS servers.
+			Most of the time, they are just added to a SMART, but they can remain standalone.
+		`),
 
 		Schema: map[string]*schema.Schema{
 			"name": {

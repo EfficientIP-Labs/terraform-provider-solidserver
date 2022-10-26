@@ -25,7 +25,7 @@ func resourceip6address() *schema.Resource {
 		},
 
 		Description: heredoc.Doc(`
-			IPv6 address object allows you to reserve IP resources for specific devices, apps or users.
+			IPv6 address resource allows to create and manage reserved addresses for specific devices, apps or users.
 			More importantly it allows to store useful meta-data for both tracking and automation purposes.
 		`),
 

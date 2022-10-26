@@ -21,7 +21,7 @@ func resourceipmac() *schema.Resource {
 		DeleteContext: resourceipmacDelete,
 
 		Description: heredoc.Doc(`
-			IP MAC allows to map an IP address with a MAC address.
+			IP MAC resource allows to map an IP address with a MAC address.
 			It does not reflect any object within SOLIDserver, it is useful when provisioning
 			IP addresses for VM(s) for which the MAC address is unknown until deployed.
 		`),

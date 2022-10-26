@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/MakeNowJust/heredoc/v2"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -25,6 +26,12 @@ func resourcednsview() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourcednsviewImportState,
 		},
+
+		Description: heredoc.Doc(`
+			DNS View resource allows to create and configure DNS views.
+			View(s) are virutal containers mostly used to implement DNS split horizon
+			providing different answers depending on matching criterias.
+		`),
 
 		Schema: map[string]*schema.Schema{
 			"name": {

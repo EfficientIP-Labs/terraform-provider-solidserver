@@ -21,7 +21,7 @@ func resourceip6mac() *schema.Resource {
 		DeleteContext: resourceip6macDelete,
 
 		Description: heredoc.Doc(`
-			IPv6 MAC allows to map an IP address with a MAC address.
+			IPv6 MAC resource allows to map an IP address with a MAC address.
 			It does not reflect any object within SOLIDserver, it is useful when provisioning
 			IP addresses for VM(s) for which the MAC address is unknown until deployed.
 		`),

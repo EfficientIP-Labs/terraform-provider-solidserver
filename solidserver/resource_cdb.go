@@ -22,7 +22,7 @@ func resourcecdb() *schema.Resource {
 		},
 
 		Description: heredoc.Doc(`
-			Custom DB allows to create and manage custom database(s) stored within SOLIDserver.
+			Custom DB resource allows to create and manage custom database(s) stored within SOLIDserver.
 			This custom databases can be leveraged within object classes and wizards in order to store custom meta-data.
 		`),
 

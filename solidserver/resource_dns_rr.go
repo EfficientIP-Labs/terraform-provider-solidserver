@@ -24,7 +24,7 @@ func resourcednsrr() *schema.Resource {
 		},
 
 		Description: heredoc.Doc(`
-			DNS RR allows to create and manage DNS resource records of type A, AAAA, PTR, CNAME, DNAME, NS.
+			DNS RR resource allows to create and manage DNS resource records of type A, AAAA, PTR, CNAME, DNAME, NS.
 		`),
 
 		Schema: map[string]*schema.Schema{

@@ -22,8 +22,8 @@ func resourceipspace() *schema.Resource {
 		},
 
 		Description: heredoc.Doc(`
-			Spaces are the highest level objets in the SOLIDserver's IPAM module organization,
-			the entry point of any IPv4 or IPv6 addressing plan. It allows to manage unique ranges
+			Space resource allows to create and manage the highest level objets in the SOLIDserver's IPAM module
+			organization, the entry point of any IPv4 or IPv6 addressing plan. Spaces allow to manage unique ranges
 			of IP addresses.
 		`),
 

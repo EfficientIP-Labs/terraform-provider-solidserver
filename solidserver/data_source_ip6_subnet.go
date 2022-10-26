@@ -17,10 +17,9 @@ func dataSourceip6subnet() *schema.Resource {
 		ReadContext: dataSourceip6subnetRead,
 
 		Description: heredoc.Doc(`
-			Within the IPAM hierarchy, subnetting is key to organize the network.
-			IPv6 Subnets are managed as networks of two type: blocks and subnets.
-			Blocks reflect assigned IP ranges (RFC1918 or public prefixes).
-			Subnets reflect the internal sub-division of your network.
+			IPv6 subnet data-source allows to retrieve information about reserved IPv6 subnets, including meta-data.
+			IPv6 Subnet are key to organize the IP space, they can be blocks or subnets. Blocks reflect assigned IP
+			ranges (RFC1918 or public prefixes). Subnets reflect the internal sub-division of your network.
 		`),
 
 		Schema: map[string]*schema.Schema{

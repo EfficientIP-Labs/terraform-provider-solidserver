@@ -20,7 +20,7 @@ func resourceipalias() *schema.Resource {
 		DeleteContext: resourceipaliasDelete,
 
 		Description: heredoc.Doc(`
-			IP aliases allows to register multiple names for a single IP address.
+			IP aliases resource allows to create and manage multiple names for a single IP address.
 			They are pretty useful to keep IPAM in sync with the DNS handling CNAME(s) from a single repository.
 		`),
 

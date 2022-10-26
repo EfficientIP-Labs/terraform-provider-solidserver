@@ -26,8 +26,8 @@ func resourceipsubnet() *schema.Resource {
 		},
 
 		Description: heredoc.Doc(`
-			IP Subnets are key to organize the network, Subnet can be blocks or subnets.
-			Blocks reflect the assigned IP ranges (RFC1918 or public prefixes).
+			IP Subnet resource allows to create and manage IPAM networks that are key to organize the IP space
+			Subnet can be blocks or subnets. Blocks reflect the assigned IP ranges (RFC1918 or public prefixes).
 			Subnets reflect the internal sub-division of your network.
 		`),
 

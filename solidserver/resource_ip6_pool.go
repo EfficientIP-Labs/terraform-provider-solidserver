@@ -25,8 +25,8 @@ func resourceip6pool() *schema.Resource {
 		},
 
 		Description: heredoc.Doc(`
-			IPv6 Pools allow reserving IPv6 addresses for specific usage such as: address provisioning, planning
-			or migrations. Pools can also be used to delegate one or several ranges of IPv6 addresses to groups
+			IPv6 Pool resource allows to create and manage ranges of IPv6 addresses for specific usage such as: provisioning,
+			planning or migrations. IPv6 Pools can also be used to delegate one or several ranges of IPv6 addresses to groups
 			of administrators or to restrict access to some users.
 		`),
 

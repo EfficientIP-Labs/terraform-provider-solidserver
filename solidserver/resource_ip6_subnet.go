@@ -27,8 +27,8 @@ func resourceip6subnet() *schema.Resource {
 		},
 
 		Description: heredoc.Doc(`
-			IPv6 Subnets are key to organize the network, Subnet can be blocks or subnets.
-			Blocks reflect the assigned IP ranges (RFC1918 or public prefixes).
+			IPv6 Subnet resource allows to create and manage IPAM networks that are key to organize the IP space
+			Subnet can be blocks or subnets. Blocks reflect the assigned IP ranges (RFC1918 or public prefixes).
 			Subnets reflect the internal sub-division of your network.
 		`),
 

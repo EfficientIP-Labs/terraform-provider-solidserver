@@ -16,7 +16,7 @@ func dataSourcecdbdata() *schema.Resource {
 		ReadContext: dataSourcecdbdataRead,
 
 		Description: heredoc.Doc(`
-			Custom DB Data allows to retrieve custom database entries stored within SOLIDserver.
+			Custom DB Data data-source allows to retrieve custom database entries stored within SOLIDserver.
 			This custom database entries can be leveraged within object classes and wizards in order to store custom meta-data.
 		`),
 
