@@ -11,7 +11,7 @@ if [ "$(git status --porcelain "${exclude_files[@]}")" ]; then
   exit 1
 fi
 
-tfplugindocs generate --provider-name "solidserver" --rendered-provider-name "SOLIDserver" --rendered-website-dir './gendoc'
+tfplugindocs generate --provider-name "solidserver" --rendered-provider-name "SOLIDserver" --rendered-website-dir './docs'
 
 # Remove the changes to files we don't autogenerate
 git checkout HEAD -- "${exclude_files[@]}"
