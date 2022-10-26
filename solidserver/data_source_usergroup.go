@@ -15,6 +15,11 @@ func dataSourceusergroup() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourceusergroupRead,
 
+		Description: heredoc.Doc(`
+			User group data-source allows to retrieve information about groups used to manage
+			permissions within SOLIDserver.
+		`),
+
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
