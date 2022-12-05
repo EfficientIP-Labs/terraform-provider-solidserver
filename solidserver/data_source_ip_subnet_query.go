@@ -122,6 +122,13 @@ func dataSourceipsubnetqueryRead(ctx context.Context, d *schema.ResourceData, me
 			d.Set("address", address)
 			d.Set("prefix", prefix)
 			d.Set("prefix_size", prefix_length)
+
+			if buf[0]["is_terminal"].(string) == "1" {
+				d.Set("terminal", true)
+			} else {
+				d.Set("terminal", false)
+			}
+
 			d.Set("netmask", prefixlengthtohexip(prefix_length))
 
 			d.Set("class", buf[0]["subnet_class_name"].(string))
