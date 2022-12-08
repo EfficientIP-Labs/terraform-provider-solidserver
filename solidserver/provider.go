@@ -88,6 +88,7 @@ func Provider() *schema.Provider {
 			"solidserver_ip6_mac":          resourceip6mac(),
 			"solidserver_device":           resourcedevice(),
 			"solidserver_vlan_domain":      resourcevlandomain(),
+			"solidserver_vlan_range":       resourcevlanrange(),
 			"solidserver_vlan":             resourcevlan(),
 			"solidserver_dns_smart":        resourcednssmart(),
 			"solidserver_dns_server":       resourcednsserver(),

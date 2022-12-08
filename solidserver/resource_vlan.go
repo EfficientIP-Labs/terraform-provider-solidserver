@@ -29,9 +29,16 @@ func resourcevlan() *schema.Resource {
 		Schema: map[string]*schema.Schema{
 			"vlan_domain": {
 				Type:        schema.TypeString,
-				Description: "The name of the vlan domain.",
+				Description: "The name of the vlan Domain.",
 				Required:    true,
 				ForceNew:    true,
+			},
+			"vlan_range": {
+				Type:        schema.TypeString,
+				Description: "The name of the vlan Range.",
+				Required:    false,
+				ForceNew:    true,
+				Default:      "",
 			},
 			"request_id": {
 				Type:        schema.TypeInt,
@@ -94,6 +101,11 @@ func resourcevlanCreate(ctx context.Context, d *schema.ResourceData, meta interf
 		parameters := url.Values{}
 		parameters.Add("add_flag", "new_only")
 		parameters.Add("vlmdomain_name", d.Get("vlan_domain").(string))
+
+		if len(d.Get("vlan_range").(string)) > 0 {
+			parameters.Add("vlmrange_name", d.Get("vlan_range").(string))
+		}
+
 		parameters.Add("vlmvlan_vlan_id", vlanIDs[i])
 		parameters.Add("vlmvlan_name", d.Get("name").(string))
 
@@ -248,6 +260,8 @@ func resourcevlanRead(ctx context.Context, d *schema.ResourceData, meta interfac
 			vnid, _ := strconv.Atoi(buf[0]["vlmvlan_vlan_id"].(string))
 
 			d.Set("name", buf[0]["vlmvlan_name"].(string))
+			d.Set("vlan_domain", buf[0]["vlmdomain_name"].(string))
+			d.Set("vlan_range", buf[0]["vlmrange_name"].(string))
 			d.Set("vlan_id", vnid)
 
 			if s.Version < 730 {
@@ -313,6 +327,8 @@ func resourcevlanImportState(ctx context.Context, d *schema.ResourceData, meta i
 			vnid, _ := strconv.Atoi(buf[0]["vlmvlan_vlan_id"].(string))
 
 			d.Set("name", buf[0]["vlmvlan_name"].(string))
+			d.Set("vlan_domain", buf[0]["vlmdomain_name"].(string))
+			d.Set("vlan_range", buf[0]["vlmrange_name"].(string))
 			d.Set("vlan_id", vnid)
 
 			if s.Version < 730 {

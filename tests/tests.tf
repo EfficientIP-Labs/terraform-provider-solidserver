@@ -50,9 +50,19 @@ resource "solidserver_vlan_domain" "myFirstVxlanDomain" {
   }
 }
 
+resource "solidserver_vlan_range" "myFirstVxlanRange" {
+  name   = "myFirstVxlanRange"
+  class  = "CUSTOM_VLAN_RANGE"
+  class_parameters = {
+    LOCATION = "PARIS"
+  }
+}
+
 resource "solidserver_vlan" "myFirstVxlan" {
   depends_on       = [solidserver_vlan_domain.myFirstVxlanDomain]
+  depends_on       = [solidserver_vlan_range.myFirstVxlanRange]
   vlan_domain      = solidserver_vlan_domain.myFirstVxlanDomain.name
+  vlan_range       = solidserver_vlan_range.myFirstVxlanRange.name
   name             = "myFirstVxlan"
   class            = "OpenStack VxLAN"
   class_parameters = {
