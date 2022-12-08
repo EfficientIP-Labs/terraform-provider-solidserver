@@ -48,7 +48,7 @@ func Provider() *schema.Provider {
 				Required:     false,
 				Optional:     true,
 				DefaultFunc:  schema.EnvDefaultFunc("SOLIDServer_VERSION", ""),
-				ValidateFunc: validation.StringMatch(regexp.MustCompile(`^([0-9]\.[0-9]\.[0-9]((\.[pP]\d+[a-z]?)|[a-z])?)$`), "Invalid Version Number"),
+				ValidateFunc: validation.StringMatch(regexp.MustCompile(`^([0-9]\.[0-9]\.[0-9]((\.[pP]\d+[a-z]?)|[a-z])?)?$`), "Invalid Version Number"),
 				Description:  "SOLIDServer Version in case API user does not have admin permissions",
 			},
 		},
