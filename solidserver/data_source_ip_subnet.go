@@ -58,6 +58,11 @@ func dataSourceipsubnet() *schema.Resource {
 				Description: "The terminal property of the IP subnet.",
 				Computed:    true,
 			},
+			"vlan_id": {
+				Type:        schema.TypeInt,
+				Description: "The optional vlan ID associated with the subnet.",
+				Computed:    true,
+			},
 			"gateway": {
 				Type:        schema.TypeString,
 				Description: "The subnet's computed gateway.",
@@ -117,6 +122,10 @@ func dataSourceipsubnetRead(ctx context.Context, d *schema.ResourceData, meta in
 				d.Set("terminal", true)
 			} else {
 				d.Set("terminal", false)
+			}
+
+			if vlanID, vlanIDExist := buf[0]["vlmvlan_vlan_id"]; vlanIDExist {
+				d.Set("vlan_id", vlanID)
 			}
 
 			d.Set("class", buf[0]["subnet_class_name"].(string))

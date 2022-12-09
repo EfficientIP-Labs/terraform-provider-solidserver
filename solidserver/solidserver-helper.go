@@ -290,14 +290,6 @@ func resourcediffsuppresscase(k, old, new string, d *schema.ResourceData) bool {
 	return false
 }
 
-func resourcediffsuppressnull(k, old, new string, d *schema.ResourceData) bool {
-	if len(old) == 0 || old == new {
-		return true
-	}
-
-	return false
-}
-
 func resourcediffsuppressIPv6Format(k, old, new string, d *schema.ResourceData) bool {
 	oldipv6, _ := netaddr.ParseIP(old)
 	newipv6, _ := netaddr.ParseIP(new)
