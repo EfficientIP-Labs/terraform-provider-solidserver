@@ -23,13 +23,14 @@ resource "solidserver_vlan" "myFirstVxlan" {
 ### Required
 
 - `name` (String) The name of the vlan to create.
-- `vlan_domain` (String) The name of the vlan domain.
+- `vlan_domain` (String) The name of the vlan Domain.
 
 ### Optional
 
 - `class` (String) The class associated to the vlan.
 - `class_parameters` (Map of String) The class parameters associated to vlan.
 - `request_id` (Number) The optionally requested vlan ID.
+- `vlan_range` (String) The name of the vlan Range.
 
 ### Read-Only
 
