@@ -62,12 +62,12 @@ func resourcednsrr() *schema.Resource {
 				ForceNew:     true,
 			},
 			"value": {
-				Type:                  schema.TypeString,
-				Description:           "The value od the RR to create.",
-				Computed:              false,
-				Required:              true,
-				ForceNew:              true,
-				DiffSuppressFunc:      resourcediffsuppressIPv6Format,
+				Type:             schema.TypeString,
+				Description:      "The value od the RR to create.",
+				Computed:         false,
+				Required:         true,
+				ForceNew:         true,
+				DiffSuppressFunc: resourcediffsuppressIPv6Format,
 			},
 			"ttl": {
 				Type:        schema.TypeInt,

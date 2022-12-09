@@ -34,11 +34,11 @@ func resourcednsserver() *schema.Resource {
 
 		Schema: map[string]*schema.Schema{
 			"name": {
-				Type:                  schema.TypeString,
-				Description:           "The name of the DNS server to create.",
-				DiffSuppressFunc:      resourcediffsuppresscase,
-				Required:              true,
-				ForceNew:              true,
+				Type:             schema.TypeString,
+				Description:      "The name of the DNS server to create.",
+				DiffSuppressFunc: resourcediffsuppresscase,
+				Required:         true,
+				ForceNew:         true,
 			},
 			"address": {
 				Type:         schema.TypeString,

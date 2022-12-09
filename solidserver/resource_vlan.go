@@ -34,13 +34,13 @@ func resourcevlan() *schema.Resource {
 				ForceNew:    true,
 			},
 			"vlan_range": {
-				Type:                  schema.TypeString,
-				Description:           "The name of the vlan Range.",
-				DiffSuppressFunc:      resourcediffsuppressnull,
-				Required:              false,
-				Optional:              true,
-				ForceNew:              true,
-				Default:               "",
+				Type:        schema.TypeString,
+				Description: "The name of the vlan Range.",
+				//DiffSuppressFunc:      resourcediffsuppressnull,
+				Required: false,
+				Optional: true,
+				ForceNew: true,
+				Default:  "",
 			},
 			"request_id": {
 				Type:        schema.TypeInt,
@@ -264,12 +264,15 @@ func resourcevlanRead(ctx context.Context, d *schema.ResourceData, meta interfac
 			vnid, _ := strconv.Atoi(buf[0]["vlmvlan_vlan_id"].(string))
 
 			d.Set("name", buf[0]["vlmvlan_name"].(string))
+			/* Do not read vlan_domain nor vlan_range as their names may change
+			// At least until suitable option is found to ignore the change
 			d.Set("vlan_domain", buf[0]["vlmdomain_name"].(string))
 			if buf[0]["vlmrange_name"].(string) != "#" {
 				d.Set("vlan_range", buf[0]["vlmrange_name"].(string))
 			} else {
 				d.Set("vlan_range", "")
 			}
+			*/
 			d.Set("vlan_id", vnid)
 
 			if s.Version < 730 {
