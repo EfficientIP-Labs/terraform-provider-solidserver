@@ -40,16 +40,16 @@ func resourcevlanrange() *schema.Resource {
 				ForceNew:    true,
 			},
 			"start": {
-				Type:         schema.TypeInt,
-				Description:  "The vlan range's lower vlan ID.",
-				Required:     true,
-				ForceNew:     true,
+				Type:        schema.TypeInt,
+				Description: "The vlan range's lower vlan ID.",
+				Required:    true,
+				ForceNew:    true,
 			},
 			"end": {
-				Type:         schema.TypeInt,
-				Description:  "The vlan range's higher vlan ID.",
-				Required:     true,
-				ForceNew:     true,
+				Type:        schema.TypeInt,
+				Description: "The vlan range's higher vlan ID.",
+				Required:    true,
+				ForceNew:    true,
 			},
 			"class": {
 				Type:        schema.TypeString,
@@ -79,8 +79,8 @@ func resourcevlanrangeCreate(ctx context.Context, d *schema.ResourceData, meta i
 	parameters.Add("add_flag", "new_only")
 	parameters.Add("vlmdomain_name", d.Get("vlan_domain").(string))
 	parameters.Add("vlmrange_name", d.Get("name").(string))
-	parameters.Add("vlmrange_start_vlan_id", d.Get("start").(string))
-	parameters.Add("vlmrange_end_vlan_id", d.Get("end").(string))
+	parameters.Add("vlmrange_start_vlan_id", strconv.Itoa(d.Get("start").(int)))
+	parameters.Add("vlmrange_end_vlan_id", strconv.Itoa(d.Get("end").(int)))
 	parameters.Add("vlmrange_class_name", d.Get("class").(string))
 	parameters.Add("vlmrange_class_parameters", urlfromclassparams(d.Get("class_parameters")).Encode())
 

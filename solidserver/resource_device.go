@@ -30,12 +30,12 @@ func resourcedevice() *schema.Resource {
 
 		Schema: map[string]*schema.Schema{
 			"name": {
-				Type:             schema.TypeString,
-				Description:      "The name of the device to create.",
-				ValidateFunc:     resourcedevicenamevalidateformat,
-				DiffSuppressFunc: resourcediffsuppresscase,
-				Required:         true,
-				ForceNew:         true,
+				Type:                  schema.TypeString,
+				Description:           "The name of the device to create.",
+				ValidateFunc:          resourcedevicenamevalidateformat,
+				DiffSuppressFunc:      resourcediffsuppresscase,
+				Required:              true,
+				ForceNew:              true,
 			},
 			"class": {
 				Type:        schema.TypeString,

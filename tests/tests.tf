@@ -51,15 +51,18 @@ resource "solidserver_vlan_domain" "myFirstVxlanDomain" {
 }
 
 resource "solidserver_vlan_range" "myFirstVxlanRange" {
-  name   = "myFirstVxlanRange"
-  class  = "CUSTOM_VLAN_RANGE"
+  depends_on   = [solidserver_vlan_domain.myFirstVxlanDomain]
+  vlan_domain  = solidserver_vlan_domain.myFirstVxlanDomain.name
+  name         = "myFirstVxlanRange"
+  start        = 1
+  end          = 42
+  class        = "CUSTOM_VLAN_RANGE"
   class_parameters = {
     LOCATION = "PARIS"
   }
 }
 
 resource "solidserver_vlan" "myFirstVxlan" {
-  depends_on       = [solidserver_vlan_domain.myFirstVxlanDomain]
   depends_on       = [solidserver_vlan_range.myFirstVxlanRange]
   vlan_domain      = solidserver_vlan_domain.myFirstVxlanDomain.name
   vlan_range       = solidserver_vlan_range.myFirstVxlanRange.name

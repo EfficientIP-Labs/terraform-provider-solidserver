@@ -35,11 +35,11 @@ func resourcednsview() *schema.Resource {
 
 		Schema: map[string]*schema.Schema{
 			"name": {
-				Type:             schema.TypeString,
-				Description:      "The name of the DNS view to create.",
-				DiffSuppressFunc: resourcediffsuppresscase,
-				Required:         true,
-				ForceNew:         true,
+				Type:                  schema.TypeString,
+				Description:           "The name of the DNS view to create.",
+				DiffSuppressFunc:      resourcediffsuppresscase,
+				Required:              true,
+				ForceNew:              true,
 			},
 			"dnsserver": {
 				Type:             schema.TypeString,

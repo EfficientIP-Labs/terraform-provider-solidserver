@@ -49,11 +49,11 @@ func resourceapplicationnode() *schema.Resource {
 				ForceNew:    true,
 			},
 			"name": {
-				Type:             schema.TypeString,
-				Description:      "The name of the application node to create.",
-				DiffSuppressFunc: resourcediffsuppresscase,
-				Required:         true,
-				ForceNew:         true,
+				Type:                  schema.TypeString,
+				Description:           "The name of the application node to create.",
+				DiffSuppressFunc:      resourcediffsuppresscase,
+				Required:              true,
+				ForceNew:              true,
 			},
 			"address": {
 				Type:         schema.TypeString,
