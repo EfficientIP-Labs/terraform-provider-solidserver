@@ -170,8 +170,7 @@ func (s *SOLIDserver) GetVersion(version string) diag.Diagnostics {
 		json.Unmarshal([]byte(body), &buf)
 
 		if rversion, rversionExist := buf[0]["member_version"].(string); rversionExist {
-			tflog.Debug(s.Ctx, fmt.Sprintf("Version: %s\n", rversion))
-
+			//tflog.Debug(s.Ctx, fmt.Sprintf("Version: %s\n", rversion))
 			StrVersion := strings.Split(rversion, ".")
 
 			// Computing version number
@@ -189,27 +188,35 @@ func (s *SOLIDserver) GetVersion(version string) diag.Diagnostics {
 				s.Version = s.Version * 10
 			}
 
-			tflog.Debug(s.Ctx, fmt.Sprintf("server version retrieved from remote SOLIDserver: %d\n", s.Version))
+			tflog.Debug(s.Ctx, fmt.Sprintf("SOLIDserver version retrieved from remote SOLIDserver: %d\n", s.Version))
 
 			return nil
 		}
 	}
 
-	if err == nil && resp.StatusCode == 401 && version != "" {
-		StrVersion := strings.Split(version, ".")
+	if err == nil && (resp.StatusCode <= 400 && resp.StatusCode < 500) {
+		if version != "" {
+			StrVersion := strings.Split(version, ".")
 
-		for i := 0; i < len(StrVersion) && i < 3; i++ {
-			num, numErr := strconv.Atoi(StrVersion[i])
-			if numErr == nil {
-				s.Version = s.Version*10 + num
-			} else {
-				s.Version = s.Version*10 + 0
+			for i := 0; i < len(StrVersion) && i < 3; i++ {
+				num, numErr := strconv.Atoi(StrVersion[i])
+				if numErr == nil {
+					s.Version = s.Version*10 + num
+				} else {
+					s.Version = s.Version*10 + 0
+				}
 			}
+			tflog.Debug(s.Ctx, fmt.Sprintf("Error retrieving SOLIDserver Version (Insufficient Permissions)."))
+			tflog.Debug(s.Ctx, fmt.Sprintf("SOLIDserver version retrived from local provider parameter: %d\n", s.Version))
+
+			return nil
+		} else {
+			return diag.Errorf("Error retrieving SOLIDserver Version (Insufficient Permissions). Consider setting the SOLIDserver's version using the provider options.\n")
 		}
+	}
 
-		tflog.Debug(s.Ctx, fmt.Sprintf("server version retrived from local provider parameter: %d\n", s.Version))
-
-		return nil
+	if err != nil {
+		return diag.Errorf("Error retrieving SOLIDserver Version (%s)\n", err)
 	}
 
 	return diag.Errorf("Error retrieving SOLIDserver Version (No Answer)\n")
