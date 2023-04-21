@@ -6,7 +6,7 @@
 
 # Folders
 _obj
-_tests
+_tests*
 _releases
 vendor
 bin
