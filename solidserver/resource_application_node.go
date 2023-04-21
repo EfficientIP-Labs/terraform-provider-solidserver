@@ -73,7 +73,7 @@ func resourceapplicationnode() *schema.Resource {
 			"healthcheck": {
 				Type:         schema.TypeString,
 				Description:  "The healthcheck name for the application node to create (Supported: ok,ping,tcp,http; Default: ok).",
-				ValidateFunc: validation.StringInSlice([]string{"ok", "ping", "tcp", "http"}, false),
+				ValidateFunc: validation.StringInSlice([]string{"ok", "ping", "tcp", "http", "custom"}, false),
 				Optional:     true,
 				Default:      "ok",
 			},
@@ -158,6 +158,15 @@ func stringfromhealcheckparams(healthCheck string, parameters interface{}) strin
 			res += url.QueryEscape(httpSSLVerify)
 		}
 		return res + "&"
+	} else if healthCheck == "custom" {
+		if scriptName, scriptNameExist := healtCheckParameters["script_name"].(string); scriptNameExist {
+			res += url.QueryEscape(scriptName)
+		}
+		res += "&"
+		if scriptParams, scriptParamsExist := healtCheckParameters["script_parameters"].(string); scriptParamsExist {
+			res += url.QueryEscape(scriptParams)
+		}
+		return res + "&"
 	} else {
 		return res
 	}
@@ -176,7 +185,6 @@ func healcheckparamsfromstring(healthCheck string, parameters string) interface{
 		} else {
 			res["tcp_port"] = ""
 		}
-		return res
 	} else if healthCheck == "http" {
 		if bufLen >= 1 {
 			res["http_host"], _ = url.QueryUnescape(buf[0])
@@ -218,10 +226,20 @@ func healcheckparamsfromstring(healthCheck string, parameters string) interface{
 		} else {
 			res["http_ssl_verify"] = "0"
 		}
-		return res
-	} else {
-		return res
+	} else if healthCheck == "custom" {
+		if bufLen >= 1 {
+			res["script_name"], _ = url.QueryUnescape(buf[0])
+		} else {
+			res["script_name"] = ""
+		}
+		if bufLen >= 2 {
+			res["script_parameters"], _ = url.QueryUnescape(buf[1])
+		} else {
+			res["script_parameters"] = ""
+		}
 	}
+
+	return res
 }
 
 func resourceapplicationnodeCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
