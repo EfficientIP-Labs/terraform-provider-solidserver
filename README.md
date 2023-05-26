@@ -27,15 +27,38 @@ go build -o terraform-provider-solidserver_vX.Y.Z
 
 If using terraform 0.13 or higher, you can leverage the terraform registry to install the provider [see here](https://registry.terraform.io/providers/EfficientIP-Labs/solidserver/latest/docs).
 
-Download the appropriate build for your system from the [release page]( https://github.com/EfficientIP-Labs/terraform-provider-solidserver/releases) or build the master branch of this repository.
+Otherwise, you can either download the appropriate build for your system from the [release page]( https://github.com/EfficientIP-Labs/terraform-provider-solidserver/releases) or build the master branch of this repository.
+In both cases, you will need to deploy the provider binary file in the proper directory as described below.
 
 ## Linux
-Move the binary file `terraform-provider-solidserver_vX.Y.Z` into the following directory: `$HOME/.terraform.d/plugins/`.
-
+Create the following folder path: `$HOME/.terraform.d/plugins/terraform.efficientip.com/efficientip/solidserver/<provider_version>/linux_amd64`
+Move the provider binary file `terraform-provider-solidserver_vX.Y.Z` into the previously created directory.
+Refer to it within your terraform file as follow:
+```
+terraform {
+  required_providers {
+    solidserver = {
+      source  = "terraform.efficientip.com/efficientip/solidserver"
+      version = "X.Y.Z"
+    }
+  }
+}
+```
 
 ## Windows
-Move the binary file `terraform-provider-solidserver_vX.Y.Z` into the following directory: `%APPDATA%\terraform.d\plugins\windows_amd64\`.
-
+Create the following folder path: `%APPDATA%\terraform.d\plugins\terraform.efficientip.com\efficientip\solidserver\<provider_version>/linux_amd64`.
+Move the provider binary file `terraform-provider-solidserver_vX.Y.Z` into the previously created directory.
+Refer to it within your terraform file as follow:
+```
+terraform {
+  required_providers {
+    solidserver = {
+      source  = "terraform.efficientip.com/efficientip/solidserver"
+      version = "X.Y.Z"
+    }
+  }
+}
+```
 
 # Debug
 You can enable debug mode by exporting `TF_LOG` environment variable setting its value to `DEBUG`.
@@ -115,4 +138,3 @@ SOLIDServer provider allows to retrieve information from several resources liste
 * [IPv6 Subnet Query](docs/data-sources/ip6_subnet_query.md)
 * [IPv6 Pool](docs/data-sources/ip6_pool.md)
 * [IPv6 Address](docs/data-sources/ip6_address.md)
-
