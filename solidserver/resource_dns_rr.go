@@ -129,8 +129,13 @@ func resourcednsrrCreate(ctx context.Context, d *schema.ResourceData, meta inter
 	parameters.Add("rr_ttl", strconv.Itoa(d.Get("ttl").(int)))
 
 	// Add dnsview parameter if it is supplied
-	if len(d.Get("dnsview").(string)) != 0 {
+	// If no view is specified and server has some configured, trigger an error
+	if len(d.Get("dnsview").(string)) > 0 {
 		parameters.Add("dnsview_name", strings.ToLower(d.Get("dnsview").(string)))
+	} else {
+		if dnsserverhasviews(d.Get("dnsserver").(string), meta) {
+			return diag.Errorf("Unable to create RR: %s, this DNS server has views. Please specify a view name.\n", d.Get("name").(string))
+		}
 	}
 
 	// Add dnszone parameter if it is supplied
@@ -298,7 +303,7 @@ func resourcednsrrRead(ctx context.Context, d *schema.ResourceData, meta interfa
 		whereClause += "' AND value1='" + d.Get("value").(string) + "' "
 	}
 
-	// Attempt to hande changing RR IDs
+	// Handle dnsview parameter
 	if len(d.Get("dnsview").(string)) != 0 {
 		whereClause += "AND dnsview_name='" + d.Get("dnsview").(string) + "' "
 	} else {

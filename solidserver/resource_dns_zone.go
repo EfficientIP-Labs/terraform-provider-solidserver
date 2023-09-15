@@ -130,9 +130,17 @@ func resourcednszoneCreate(ctx context.Context, d *schema.ResourceData, meta int
 	parameters := url.Values{}
 	parameters.Add("add_flag", "new_only")
 	parameters.Add("dns_name", d.Get("dnsserver").(string))
+
+	// Add dnsview parameter if it is supplied
+	// If no view is specified and server has some configured, trigger an error
 	if strings.Compare(d.Get("dnsview").(string), "#") != 0 {
 		parameters.Add("dnsview_name", strings.ToLower(d.Get("dnsview").(string)))
+	} else {
+		if dnsserverhasviews(d.Get("dnsserver").(string), meta) {
+			return diag.Errorf("Error creating DNS zone: %s, this DNS server has views. Please specify a view name.\n", d.Get("name").(string))
+		}
 	}
+
 	parameters.Add("dnszone_name", d.Get("name").(string))
 	parameters.Add("dnszone_type", strings.ToLower(d.Get("type").(string)))
 	parameters.Add("dnszone_site_id", siteID)

@@ -1250,6 +1250,47 @@ func dnsserverstatus(serverID string, meta interface{}) string {
 	return ""
 }
 
+// Get DNS Server View Support
+// Return an true if the DNS Server has views
+func dnsserverhasviews(serverName string, meta interface{}) bool {
+	s := meta.(*SOLIDserver)
+
+	// Building parameters for retrieving information
+	parameters := url.Values{}
+
+	whereClause := "dns_name='" + serverName + "'"
+	parameters.Add("WHERE", whereClause)
+
+	// Sending the get request
+	resp, body, err := s.Request("get", "rest/dns_view_list", &parameters)
+
+	if err == nil {
+		var buf [](map[string]interface{})
+		json.Unmarshal([]byte(body), &buf)
+
+		// Checking the answer
+		if resp.StatusCode == 204 {
+			return false
+		}
+
+		// Checking the answer
+		if resp.StatusCode == 200 && len(buf) > 0 {
+			return true
+		}
+
+		// Log the error
+		if len(buf) > 0 {
+			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
+				tflog.Debug(s.Ctx, fmt.Sprintf("Unable to retrieve DNS server views (%s)\n", errMsg))
+			}
+		} else {
+			tflog.Debug(s.Ctx, fmt.Sprintf("Unable to retrieve DNS server views\n"))
+		}
+	}
+
+	return true
+}
+
 // Get number of pending deletion operations on DNS server
 // Return -1 in case of failure
 func dnsserverpendingdeletions(serverID string, meta interface{}) int {
