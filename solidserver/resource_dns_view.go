@@ -35,11 +35,11 @@ func resourcednsview() *schema.Resource {
 
 		Schema: map[string]*schema.Schema{
 			"name": {
-				Type:             schema.TypeString,
-				Description:      "The name of the DNS view to create.",
-				DiffSuppressFunc: resourcediffsuppresscase,
-				Required:         true,
-				ForceNew:         true,
+				Type:        schema.TypeString,
+				Description: "The name of the DNS view to create.",
+				//DiffSuppressFunc: resourcediffsuppresscase,
+				Required: true,
+				ForceNew: true,
 			},
 			"dnsserver": {
 				Type:             schema.TypeString,
@@ -149,7 +149,7 @@ func resourcednsviewCreate(ctx context.Context, d *schema.ResourceData, meta int
 	// Building parameters
 	parameters := url.Values{}
 	parameters.Add("add_flag", "new_only")
-	parameters.Add("dnsview_name", strings.ToLower(d.Get("name").(string)))
+	parameters.Add("dnsview_name", d.Get("name").(string))
 	parameters.Add("dns_name", strings.ToLower(d.Get("dnsserver").(string)))
 
 	// Configure recursion
@@ -234,7 +234,7 @@ func resourcednsviewCreate(ctx context.Context, d *schema.ResourceData, meta int
 
 				if d.Get("forward").(string) == "none" {
 					if fwdList != "" {
-						return diag.Errorf("Error creating DNS view: %s (Forward mode set to 'none' but forwarders list is not empty).", strings.ToLower(d.Get("name").(string)))
+						return diag.Errorf("Error creating DNS view: %s (Forward mode set to 'none' but forwarders list is not empty).", d.Get("name").(string))
 					}
 					// NOT required at creation time - dnsparamunset(d.Get("dnsserver").(string), oid, "forward", meta)
 					dnsparamset(d.Get("dnsserver").(string), oid, "forwarders", "", meta)
@@ -251,13 +251,13 @@ func resourcednsviewCreate(ctx context.Context, d *schema.ResourceData, meta int
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
 				if errParam, errParamExist := buf[0]["parameters"].(string); errParamExist {
-					return diag.Errorf("Unable to create DNS view: %s (%s - %s)", strings.ToLower(d.Get("name").(string)), errMsg, errParam)
+					return diag.Errorf("Unable to create DNS view: %s (%s - %s)", d.Get("name").(string), errMsg, errParam)
 				}
-				return diag.Errorf("Unable to create DNS view: %s (%s)", strings.ToLower(d.Get("name").(string)), errMsg)
+				return diag.Errorf("Unable to create DNS view: %s (%s)", d.Get("name").(string), errMsg)
 			}
 		}
 
-		return diag.Errorf("Unable to create DNS view: %s\n", strings.ToLower(d.Get("name").(string)))
+		return diag.Errorf("Unable to create DNS view: %s\n", d.Get("name").(string))
 	}
 
 	// Reporting a failure
@@ -271,7 +271,7 @@ func resourcednsviewUpdate(ctx context.Context, d *schema.ResourceData, meta int
 	parameters := url.Values{}
 	parameters.Add("dnsview_id", d.Id())
 	parameters.Add("dns_name", strings.ToLower(d.Get("dnsserver").(string)))
-	parameters.Add("dnsview_name", strings.ToLower(d.Get("name").(string)))
+	parameters.Add("dnsview_name", d.Get("name").(string))
 	parameters.Add("add_flag", "edit_only")
 
 	// Configure recursion
@@ -356,7 +356,7 @@ func resourcednsviewUpdate(ctx context.Context, d *schema.ResourceData, meta int
 
 				if d.Get("forward").(string) == "none" {
 					if fwdList != "" {
-						return diag.Errorf("Error creating DNS view: %s (Forward mode set to 'none' but forwarders list is not empty).", strings.ToLower(d.Get("name").(string)))
+						return diag.Errorf("Error creating DNS view: %s (Forward mode set to 'none' but forwarders list is not empty).", d.Get("name").(string))
 					}
 					dnsparamunset(d.Get("dnsserver").(string), oid, "forward", meta)
 					dnsparamset(d.Get("dnsserver").(string), oid, "forwarders", "", meta)
@@ -372,13 +372,13 @@ func resourcednsviewUpdate(ctx context.Context, d *schema.ResourceData, meta int
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
 				if errParam, errParamExist := buf[0]["parameters"].(string); errParamExist {
-					return diag.Errorf("Unable to update DNS view: %s (%s - %s)", strings.ToLower(d.Get("name").(string)), errMsg, errParam)
+					return diag.Errorf("Unable to update DNS view: %s (%s - %s)", d.Get("name").(string), errMsg, errParam)
 				}
-				return diag.Errorf("Unable to update DNS view: %s (%s)", strings.ToLower(d.Get("name").(string)), errMsg)
+				return diag.Errorf("Unable to update DNS view: %s (%s)", d.Get("name").(string), errMsg)
 			}
 		}
 
-		return diag.Errorf("Unable to update DNS view: %s\n", strings.ToLower(d.Get("name").(string)))
+		return diag.Errorf("Unable to update DNS view: %s\n", d.Get("name").(string))
 	}
 
 	// Reporting a failure
@@ -414,10 +414,10 @@ func resourcednsviewDelete(ctx context.Context, d *schema.ResourceData, meta int
 				// Logging a failure
 				if len(buf) > 0 {
 					if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-						tflog.Debug(ctx, fmt.Sprintf("Unable to delete DNS view: %s (%s)", strings.ToLower(d.Get("name").(string)), errMsg))
+						tflog.Debug(ctx, fmt.Sprintf("Unable to delete DNS view: %s (%s)", d.Get("name").(string), errMsg))
 					}
 				} else {
-					tflog.Debug(ctx, fmt.Sprintf("Unable to delete DNS view: %s", strings.ToLower(d.Get("name").(string))))
+					tflog.Debug(ctx, fmt.Sprintf("Unable to delete DNS view: %s", d.Get("name").(string)))
 				}
 				time.Sleep(time.Duration(8 * time.Second))
 			}
@@ -564,7 +564,7 @@ func resourcednsviewRead(ctx context.Context, d *schema.ResourceData, meta inter
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
 				// Log the error
-				tflog.Debug(ctx, fmt.Sprintf("Unable to find DNS view: %s (%s)\n", strings.ToLower(d.Get("name").(string)), errMsg))
+				tflog.Debug(ctx, fmt.Sprintf("Unable to find DNS view: %s (%s)\n", d.Get("name").(string), errMsg))
 			}
 		} else {
 			// Log the error
@@ -574,7 +574,7 @@ func resourcednsviewRead(ctx context.Context, d *schema.ResourceData, meta inter
 		// Do not unset the local ID to avoid inconsistency
 
 		// Reporting a failure
-		return diag.Errorf("Unable to find DNS view: %s\n", strings.ToLower(d.Get("name").(string)))
+		return diag.Errorf("Unable to find DNS view: %s\n", d.Get("name").(string))
 	}
 
 	// Reporting a failure

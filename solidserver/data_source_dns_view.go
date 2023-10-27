@@ -132,7 +132,7 @@ func dataSourcednsviewRead(ctx context.Context, d *schema.ResourceData, meta int
 		if resp.StatusCode == 200 && len(buf) > 0 {
 			d.SetId(buf[0]["dnsview_id"].(string))
 
-			d.Set("name", strings.ToLower(buf[0]["dnsview_name"].(string)))
+			d.Set("name", buf[0]["dnsview_name"].(string))
 			d.Set("dnsserver", buf[0]["dns_name"].(string))
 
 			viewOrder, _ := strconv.Atoi(buf[0]["dnsview_order"].(string))

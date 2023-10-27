@@ -131,7 +131,7 @@ func resourcednsrrCreate(ctx context.Context, d *schema.ResourceData, meta inter
 	// Add dnsview parameter if it is supplied
 	// If no view is specified and server has some configured, trigger an error
 	if len(d.Get("dnsview").(string)) > 0 {
-		parameters.Add("dnsview_name", strings.ToLower(d.Get("dnsview").(string)))
+		parameters.Add("dnsview_name", d.Get("dnsview").(string))
 	} else {
 		if dnsserverhasviews(d.Get("dnsserver").(string), meta) {
 			return diag.Errorf("Unable to create RR: %s, this DNS server has views. Please specify a view name.\n", d.Get("name").(string))
@@ -195,7 +195,7 @@ func resourcednsrrUpdate(ctx context.Context, d *schema.ResourceData, meta inter
 
 	// Add dnsview parameter if it is supplied
 	if len(d.Get("dnsview").(string)) != 0 {
-		parameters.Add("dnsview_name", strings.ToLower(d.Get("dnsview").(string)))
+		parameters.Add("dnsview_name", d.Get("dnsview").(string))
 	}
 
 	// Add dnszone parameter if it is supplied
@@ -249,7 +249,7 @@ func resourcednsrrDelete(ctx context.Context, d *schema.ResourceData, meta inter
 
 	// Add dnsview parameter if it is supplied
 	if len(d.Get("dnsview").(string)) != 0 {
-		parameters.Add("dnsview_name", strings.ToLower(d.Get("dnsview").(string)))
+		parameters.Add("dnsview_name", d.Get("dnsview").(string))
 	}
 
 	// Sending the deletion request

@@ -134,7 +134,7 @@ func resourcednszoneCreate(ctx context.Context, d *schema.ResourceData, meta int
 	// Add dnsview parameter if it is supplied
 	// If no view is specified and server has some configured, trigger an error
 	if strings.Compare(d.Get("dnsview").(string), "#") != 0 {
-		parameters.Add("dnsview_name", strings.ToLower(d.Get("dnsview").(string)))
+		parameters.Add("dnsview_name", d.Get("dnsview").(string))
 	} else {
 		if dnsserverhasviews(d.Get("dnsserver").(string), meta) {
 			return diag.Errorf("Error creating DNS zone: %s, this DNS server has views. Please specify a view name.\n", d.Get("name").(string))
@@ -225,7 +225,7 @@ func resourcednszoneUpdate(ctx context.Context, d *schema.ResourceData, meta int
 	parameters.Add("dnszone_id", d.Id())
 	parameters.Add("add_flag", "edit_only")
 	if strings.Compare(d.Get("dnsview").(string), "#") != 0 {
-		parameters.Add("dnsview_name", strings.ToLower(d.Get("dnsview").(string)))
+		parameters.Add("dnsview_name", d.Get("dnsview").(string))
 	}
 	parameters.Add("dnszone_site_id", siteID)
 
@@ -302,7 +302,7 @@ func resourcednszoneDelete(ctx context.Context, d *schema.ResourceData, meta int
 	parameters.Add("dnszone_id", d.Id())
 
 	if strings.Compare(d.Get("dnsview").(string), "#") != 0 {
-		parameters.Add("dnsview_name", strings.ToLower(d.Get("dnsview").(string)))
+		parameters.Add("dnsview_name", d.Get("dnsview").(string))
 	}
 
 	// Sending the deletion request
