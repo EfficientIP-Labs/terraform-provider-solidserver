@@ -447,7 +447,7 @@ func resourcednsviewRead(ctx context.Context, d *schema.ResourceData, meta inter
 
 		// Checking the answer
 		if resp.StatusCode == 200 && len(buf) > 0 {
-			d.Set("name", strings.ToLower(buf[0]["dnsview_name"].(string)))
+			d.Set("name", buf[0]["dnsview_name"].(string))
 			d.Set("dnsserver", buf[0]["dns_name"].(string))
 
 			viewOrder, _ := strconv.Atoi(buf[0]["dnsview_order"].(string))
@@ -597,7 +597,7 @@ func resourcednsviewImportState(ctx context.Context, d *schema.ResourceData, met
 
 		// Checking the answer
 		if resp.StatusCode == 200 && len(buf) > 0 {
-			d.Set("name", strings.ToLower(buf[0]["dnsview_name"].(string)))
+			d.Set("name", buf[0]["dnsview_name"].(string))
 			d.Set("dnsserver", buf[0]["dns_name"].(string))
 
 			viewOrder, _ := strconv.Atoi(buf[0]["dnsview_order"].(string))
