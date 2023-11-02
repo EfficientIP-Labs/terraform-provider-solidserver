@@ -324,7 +324,7 @@ data "solidserver_dns_server" "myFirstDnsServerData" {
 
 resource "solidserver_dns_view" "myFirstDnsView" {
   depends_on      = [solidserver_dns_smart.myFirstDnsSMART]
-  name            = "myfirstdnsview"
+  name            = "myFirstDNSview"
   dnsserver       = solidserver_dns_smart.myFirstDnsSMART.name
   recursion       = true
   forward         = "first"
