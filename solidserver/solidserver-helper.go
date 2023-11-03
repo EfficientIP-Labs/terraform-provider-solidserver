@@ -150,20 +150,6 @@ func ip6toptr(ip string) string {
 	return res + "ip6.arpa"
 }
 
-// Convert a net.IP object into an IPv6 address in full format
-// func FullIPv6(ip net.IP) string {
-//     dst := make([]byte, hex.EncodedLen(len(ip)))
-//     _ = hex.Encode(dst, ip)
-//     return string(dst[0:4]) + ":" +
-//         string(dst[4:8]) + ":" +
-//         string(dst[8:12]) + ":" +
-//         string(dst[12:16]) + ":" +
-//         string(dst[16:20]) + ":" +
-//         string(dst[20:24]) + ":" +
-//         string(dst[24:28]) + ":" +
-//         string(dst[28:])
-// }
-
 // Convert hexa IPv6 address string into standard IPv6 address string
 // Return an empty string in case of failure
 func hexip6toip6(hexip string) string {
@@ -282,6 +268,7 @@ func longtoip(iplong uint32) string {
 	return fmt.Sprintf("%d.%d.%d.%d", a, b, c, d)
 }
 
+// Ignore Case When comparing remote and local value
 func resourcediffsuppresscase(k, old, new string, d *schema.ResourceData) bool {
 	if strings.ToLower(old) == strings.ToLower(new) {
 		return true
@@ -290,6 +277,7 @@ func resourcediffsuppresscase(k, old, new string, d *schema.ResourceData) bool {
 	return false
 }
 
+// Ignore Different IPv6 Format
 func resourcediffsuppressIPv6Format(k, old, new string, d *schema.ResourceData) bool {
 	oldipv6, _ := netaddr.ParseIP(old)
 	newipv6, _ := netaddr.ParseIP(new)
