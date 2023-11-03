@@ -41,4 +41,5 @@ data "solidserver_ip_subnet" "myFirstIPSubnetData" {
 - `prefix` (String) The IP subnet prefix.
 - `prefix_size` (Number) The IP subnet's prefix length (ex: 24 for a '/24').
 - `terminal` (Boolean) The terminal property of the IP subnet.
+- `vlan_id` (Number) The optional vlan ID associated with the subnet.
 
