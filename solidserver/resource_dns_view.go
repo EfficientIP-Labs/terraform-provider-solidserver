@@ -8,6 +8,7 @@ import (
 	"github.com/MakeNowJust/heredoc/v2"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/customdiff"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"net/url"
@@ -38,6 +39,7 @@ func resourcednsview() *schema.Resource {
 				Type:        schema.TypeString,
 				Description: "The name of the DNS view to create.",
 				//DiffSuppressFunc: resourcediffsuppresscase,
+				// See https://developer.hashicorp.com/terraform/plugin/sdkv2/resources/customizing-differences
 				Required: true,
 				ForceNew: true,
 			},
@@ -140,6 +142,14 @@ func resourcednsview() *schema.Resource {
 				},
 			},
 		},
+		CustomizeDiff: customdiff.All(
+			customdiff.ValidateChange("name", func(ctx context.Context, old, new, meta any) error {
+				if strings.ToLower(new.(string)) != new.(string) && strings.ToLower(old.(string)) == old.(string) && strings.ToLower(new.(string)) == strings.ToLower(old.(string)){
+					return fmt.Errorf("View name contains upper case characters (%s), remote name matches but is lower case (%s). Consider fixing your .tf file(s).", new.(string), old.(string))
+				}
+				return nil
+			}),
+		),
 	}
 }
 
