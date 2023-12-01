@@ -28,7 +28,9 @@ func dataSourcednszone() *schema.Resource {
 			"dnsview": {
 				Type:        schema.TypeString,
 				Description: "The name of DNS view hosting the DNS zone.",
-				Computed:    true,
+				Required:    false,
+				Optional:    true,
+				Default:     "",
 			},
 			"name": {
 				Type:        schema.TypeString,
@@ -71,7 +73,14 @@ func dataSourcednszoneRead(ctx context.Context, d *schema.ResourceData, meta int
 	// Building parameters
 	parameters := url.Values{}
 
-	parameters.Add("WHERE", "dnszone_name='"+d.Get("name").(string)+"'")
+	whereClause := "dnszone_name='" + d.Get("name").(string) + "'"
+
+	if view, ok := d.Get("view").(string); ok && view != "" {
+    whereClause += " AND dnsview_name='" + view + "'"
+	}
+
+	parameters.Add("WHERE", whereClause)
+
 	parameters.Add("limit", "1")
 	parameters.Add("type", d.Get("type").(string))
 
