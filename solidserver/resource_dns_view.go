@@ -144,7 +144,7 @@ func resourcednsview() *schema.Resource {
 		},
 		CustomizeDiff: customdiff.All(
 			customdiff.ValidateChange("name", func(ctx context.Context, old, new, meta any) error {
-				if strings.ToLower(new.(string)) != new.(string) && strings.ToLower(old.(string)) == old.(string) && strings.ToLower(new.(string)) == strings.ToLower(old.(string)){
+				if strings.ToLower(new.(string)) != new.(string) && strings.ToLower(old.(string)) == old.(string) && strings.ToLower(new.(string)) == strings.ToLower(old.(string)) {
 					return fmt.Errorf("View name contains upper case characters (%s), remote name matches but is lower case (%s). Consider fixing your .tf file(s).", new.(string), old.(string))
 				}
 				return nil

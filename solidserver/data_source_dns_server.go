@@ -18,7 +18,7 @@ func dataSourcednsserver() *schema.Resource {
 		ReadContext: dataSourcednsserverRead,
 
 		Description: heredoc.Doc(`
-			DNS Server data-source allows to retrieve information about DNS servers.
+			DNS server data-source allows to retrieve information about DNS servers.
 			Most of the time, they are just added to a SMART, but they can remain standalone.
 		`),
 

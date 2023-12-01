@@ -5,11 +5,11 @@
 - [-] Upgrade SDK to V2 (https://www.terraform.io/plugin/sdkv2/guides/v2-upgrade-guide)
   - [X] Migrate to the new provider
   - [X] Migrate all Create/Reade/Delete Functions to their context aware equivalent (See IPSpace or DNS RR resources for example)
-  - [ ] Migrate all SchemaValidateFunc to SchemaValidateDiagFunc - https://www.terraform.io/plugin/sdkv2/guides/v2-upgrade-guide#deprecation-of-helper-schema-schemavalidatefunc
+  - [C] Migrate all SchemaValidateFunc to SchemaValidateDiagFunc - https://www.terraform.io/plugin/sdkv2/guides/v2-upgrade-guide#deprecation-of-helper-schema-schemavalidatefunc
   - [X] Remove all ExistsFunc that are now deprecated - https://www.terraform.io/plugin/sdkv2/guides/v2-upgrade-guide#deprecation-of-helper-schema-existsfunc
-  - [ ] Check all deprecated validation function - https://www.terraform.io/plugin/sdkv2/guides/v2-upgrade-guide#removal-of-deprecated-validation-functions
+  - [X] Check all deprecated validation function - https://www.terraform.io/plugin/sdkv2/guides/v2-upgrade-guide#removal-of-deprecated-validation-functions
   - [X] Implement support for diagnostics
-  - [ ] Implement resource-Level and field-Level descriptions
+  - [X] Implement resource-Level and field-Level descriptions
   - [ ] Leverage new validation from schema.Schema.Computed - https://www.terraform.io/plugin/sdkv2/guides/v2-upgrade-guide#stronger-validation-for-helper-schema-schema-computed-fields
 - [ ] Fix DNZ Zone DataSource (DNS Server and View might be needed + filter zone having no parent (smart or standalone))
 - [ ] Implement binary generation for https://www.terraform.io/registry/providers/os-arch
@@ -19,6 +19,7 @@
 - [ ] Implement support for Subnet/VLAN relationship
 - [ ] Implement support for SOLIDserver resources covering (NTP/SNMP/Admin & ipmadmin Passwords/Certificat SSL/Services)
 - [ ] Increase test coverage based on https://www.terraform.io/docs/extend/testing/acceptance-tests/index.html
+- [ ] Consider migrating to Terraform Plugin Framework (https://developer.hashicorp.com/terraform/plugin/framework) | https://github.com/hashicorp/terraform-provider-scaffolding-framework
 
 # Useful Links
 

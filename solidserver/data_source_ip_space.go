@@ -69,9 +69,7 @@ func dataSourceipspaceRead(ctx context.Context, d *schema.ResourceData, meta int
 			computedClassParameters := map[string]string{}
 
 			for ck := range retrievedClassParameters {
-				if ck != "gateway" {
-					computedClassParameters[ck] = retrievedClassParameters[ck][0]
-				}
+				computedClassParameters[ck] = retrievedClassParameters[ck][0]
 			}
 
 			d.Set("class_parameters", computedClassParameters)
