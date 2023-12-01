@@ -53,6 +53,11 @@ func dataSourceip6subnet() *schema.Resource {
 				Description: "The terminal property of the IPv6 subnet.",
 				Computed:    true,
 			},
+			"vlan_id": {
+				Type:        schema.TypeInt,
+				Description: "The optional vlan ID associated with the subnet.",
+				Computed:    true,
+			},
 			"gateway": {
 				Type:        schema.TypeString,
 				Description: "The  IPv6 subnet's computed gateway.",
@@ -109,6 +114,10 @@ func dataSourceip6subnetRead(ctx context.Context, d *schema.ResourceData, meta i
 				d.Set("terminal", true)
 			} else {
 				d.Set("terminal", false)
+			}
+
+			if vlanID, vlanIDExist := buf[0]["vlmvlan_vlan_id"]; vlanIDExist {
+				d.Set("vlan_id", vlanID)
 			}
 
 			d.Set("class", buf[0]["subnet6_class_name"].(string))
