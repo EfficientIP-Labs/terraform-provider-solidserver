@@ -68,8 +68,9 @@ resource "solidserver_vlan_range" "myFirstVxlanRange" {
 }
 
 data "solidserver_vlan_range" "myFirstVxlanRangeData" {
-  depends_on = [solidserver_vlan_range.myFirstVxlanDomain]
-  name       = solidserver_vlan_range.myFirstVxlanDomain.name
+  depends_on   = [solidserver_vlan_range.myFirstVxlanRange]
+  vlan_domain  = solidserver_vlan_domain.myFirstVxlanDomain.name
+  name         = solidserver_vlan_range.myFirstVxlanRange.name
 }
 
 resource "solidserver_vlan" "myFirstVxlan" {
@@ -83,9 +84,10 @@ resource "solidserver_vlan" "myFirstVxlan" {
   }
 }
 
-data "solidserver_vlan_range" "myFirstVxlanData" {
-  depends_on = [solidserver_vlan.myFirstVxlan]
-  name       = solidserver_vlan.myFirstVxlan.name
+data "solidserver_vlan" "myFirstVxlanData" {
+  depends_on  = [solidserver_vlan.myFirstVxlan]
+  vlan_domain = solidserver_vlan_domain.myFirstVxlanDomain.name
+  name        = solidserver_vlan.myFirstVxlan.name
 }
 
 resource "solidserver_vlan" "mySecondVxlan" {
