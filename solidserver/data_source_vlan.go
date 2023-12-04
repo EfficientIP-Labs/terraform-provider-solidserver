@@ -67,7 +67,7 @@ func dataSourcevlanRead(ctx context.Context, d *schema.ResourceData, meta interf
 	whereClause := "vlmdomain_name='" + d.Get("vlan_domain").(string) + "' AND vlmvlan_name='" + d.Get("name").(string) + "'"
 
 	if vlanRange, ok := d.Get("vlan_range").(string); ok && vlanRange != "" {
-    whereClause += " AND vlmrange_name='" + vlanRange + "'"
+		whereClause += " AND vlmrange_name='" + vlanRange + "'"
 	}
 
 	parameters.Add("WHERE", whereClause)

@@ -76,7 +76,7 @@ func dataSourcednszoneRead(ctx context.Context, d *schema.ResourceData, meta int
 	whereClause := "dnszone_name='" + d.Get("name").(string) + "'"
 
 	if view, ok := d.Get("view").(string); ok && view != "" {
-    whereClause += " AND dnsview_name='" + view + "'"
+		whereClause += " AND dnsview_name='" + view + "'"
 	}
 
 	parameters.Add("WHERE", whereClause)
