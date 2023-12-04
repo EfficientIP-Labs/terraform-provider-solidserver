@@ -2,13 +2,13 @@
 page_title: "solidserver_dns_server Data Source - SOLIDserver"
 subcategory: ""
 description: |-
-  DNS Server data-source allows to retrieve information about DNS servers.
+  DNS server data-source allows to retrieve information about DNS servers.
   Most of the time, they are just added to a SMART, but they can remain standalone.
 ---
 
 # solidserver_dns_server (Data Source)
 
-DNS Server data-source allows to retrieve information about DNS servers.
+DNS server data-source allows to retrieve information about DNS servers.
 Most of the time, they are just added to a SMART, but they can remain standalone.
 
 ## Example Usage

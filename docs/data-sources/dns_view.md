@@ -2,14 +2,14 @@
 page_title: "solidserver_dns_view Data Source - SOLIDserver"
 subcategory: ""
 description: |-
-  DNS View data-source allows to retrieve information about DNS views.
+  DNS view data-source allows to retrieve information about DNS views.
   View(s) are virutal containers mostly used to implement DNS split horizon
   providing different answers depending on matching criterias.
 ---
 
 # solidserver_dns_view (Data Source)
 
-DNS View data-source allows to retrieve information about DNS views.
+DNS view data-source allows to retrieve information about DNS views.
 View(s) are virutal containers mostly used to implement DNS split horizon
 providing different answers depending on matching criterias.
 

@@ -23,13 +23,16 @@ data "solidserver_dns_zone" "myFirstDnsZoneData" {
 
 - `name` (String) The Domain Name served by the DNS zone.
 
+### Optional
+
+- `dnsview` (String) The name of DNS view hosting the DNS zone.
+
 ### Read-Only
 
 - `class` (String) The class associated to the DNS zone.
 - `class_parameters` (Map of String) The class parameters associated to IP space.
 - `createptr` (Boolean) Automaticaly create PTR records for the DNS zone.
 - `dnsserver` (String) The name of DNS server or DNS SMART hosting the DNS zone.
-- `dnsview` (String) The name of DNS view hosting the DNS zone.
 - `id` (String) The ID of this resource.
 - `space` (String) The name of a space associated to the DNS zone.
 - `type` (String) The Type of the DNS zone.

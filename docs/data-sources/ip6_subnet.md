@@ -40,4 +40,5 @@ data "solidserver_ip6_subnet" "myFirstIP6SubnetData" {
 - `prefix` (String) The IPv6 subnet prefix.
 - `prefix_size` (Number) The IPv6 subnet's prefix length (ex: 64 for a '/64').
 - `terminal` (Boolean) The terminal property of the IPv6 subnet.
+- `vlan_id` (Number) The optional vlan ID associated with the subnet.
 
