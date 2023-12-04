@@ -119,6 +119,7 @@ SOLIDServer provider allows to manage several resources listed below:
 * [User Group](docs/resources/usergroup.md)
 * [User](docs/resources/user.md)
 * [VLAN Domain](docs/resources/vlan_domain.md)
+* [VLAN Range](docs/resources/vlan_range.md)
 * [VLAN](docs/resources/vlan.md)
 
 # Available Data-Sources
@@ -138,3 +139,6 @@ SOLIDServer provider allows to retrieve information from several resources liste
 * [IPv6 Subnet Query](docs/data-sources/ip6_subnet_query.md)
 * [IPv6 Pool](docs/data-sources/ip6_pool.md)
 * [IPv6 Address](docs/data-sources/ip6_address.md)
+* [VLAN Domain](docs/data-sources/vlan_domain.md)
+* [VLAN Range](docs/data-sources/vlan_range.md)
+* [VLAN](docs/data-sources/vlan.md)
