@@ -30,17 +30,6 @@ var httpRequestMethods = map[string]HttpRequestFunc{
 	"get":    (*gorequest.SuperAgent).Get,
 }
 
-var httpRequestTimings = map[string]struct {
-	msSweep  int
-	sTimeout int
-	maxTry   int
-}{
-	"post":   {msSweep: 16, sTimeout: 10, maxTry: 1},
-	"put":    {msSweep: 16, sTimeout: 10, maxTry: 1},
-	"delete": {msSweep: 16, sTimeout: 10, maxTry: 1},
-	"get":    {msSweep: 16, sTimeout: 3, maxTry: 6},
-}
-
 const regexpIPPort = `^!?(([0-9]{1,3})\.){3}[0-9]{1,3}:[0-9]{1,5}$`
 const regexpHostname = `^(([a-z0-9]|[a-z0-9][a-z0-9\-]*[a-z0-9])\.)*([a-z0-9]|[a-z0-9][a-z0-9\-]*[a-z0-9])$`
 const regexpNetworkAcl = `^!?(([0-9]{1,3})\.){3}[0-9]{1,3}/[0-9]{1,2}$`
@@ -53,11 +42,12 @@ type SOLIDserver struct {
 	BaseUrl                  string
 	SSLVerify                bool
 	AdditionalTrustCertsFile string
+	Timeout                  int
 	Version                  int
 	Authenticated            bool
 }
 
-func NewSOLIDserver(ctx context.Context, host string, username string, password string, sslverify bool, certsfile string, version string) (*SOLIDserver, diag.Diagnostics) {
+func NewSOLIDserver(ctx context.Context, host string, username string, password string, sslverify bool, certsfile string, timeout int, version string) (*SOLIDserver, diag.Diagnostics) {
 	s := &SOLIDserver{
 		Ctx:                      ctx,
 		Host:                     host,
@@ -66,6 +56,7 @@ func NewSOLIDserver(ctx context.Context, host string, username string, password 
 		BaseUrl:                  "https://" + host,
 		SSLVerify:                sslverify,
 		AdditionalTrustCertsFile: certsfile,
+		Timeout:                  timeout,
 		Version:                  0,
 		Authenticated:            false,
 	}
@@ -82,6 +73,17 @@ func SubmitRequest(s *SOLIDserver, apiclient *gorequest.SuperAgent, method strin
 	var body string = ""
 	var errs []error = nil
 	var requestUrl string = ""
+
+	var httpRequestTimings = map[string]struct {
+		msSweep  int
+		sTimeout int
+		maxTry   int
+	}{
+		"post":   {msSweep: 16, sTimeout: s.Timeout, maxTry: 1},
+		"put":    {msSweep: 16, sTimeout: s.Timeout, maxTry: 1},
+		"delete": {msSweep: 16, sTimeout: s.Timeout, maxTry: 1},
+		"get":    {msSweep: 16, sTimeout: s.Timeout, maxTry: 6},
+	}
 
 	// Get the SystemCertPool, continue with an empty pool on error
 	rootCAs, x509err := x509.SystemCertPool()

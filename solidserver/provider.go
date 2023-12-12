@@ -43,6 +43,13 @@ func Provider() *schema.Provider {
 				DefaultFunc: schema.EnvDefaultFunc("SOLIDServer_ADDITIONALTRUSTCERTSFILE", nil),
 				Description: "PEM formatted file with additional certificates to trust for TLS connection",
 			},
+			"timeout": {
+				Type:        schema.TypeInt,
+				Required:    false,
+				Optional:    true,
+				Description: "API call timeout value in seconds (Default 10s)",
+				Default:     10,
+			},
 			"solidserverversion": {
 				Type:         schema.TypeString,
 				Required:     false,
@@ -119,6 +126,7 @@ func ProviderConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 		d.Get("password").(string),
 		d.Get("sslverify").(bool),
 		d.Get("additional_trust_certs_file").(string),
+		d.Get("timeout").(int),
 		d.Get("solidserverversion").(string),
 	)
 	return s, err
