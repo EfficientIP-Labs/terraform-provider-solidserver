@@ -419,6 +419,10 @@ func resourcednsrrImportState(ctx context.Context, d *schema.ResourceData, meta 
 
 			d.Set("ttl", ttl)
 
+			if buf[0]["dnszone_name"].(string) != "#" {
+				d.Set("dnszone", buf[0]["dnszone_name"].(string))
+			}
+
 			if buf[0]["dnsview_name"].(string) != "#" {
 				d.Set("dnsview", buf[0]["dnsview_name"].(string))
 			}
