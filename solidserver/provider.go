@@ -2,10 +2,13 @@ package solidserver
 
 import (
 	"context"
+	"net/url"
+	"regexp"
+
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"regexp"
 )
 
 func Provider() *schema.Provider {
@@ -57,6 +60,14 @@ func Provider() *schema.Provider {
 				DefaultFunc:  schema.EnvDefaultFunc("SOLIDServer_VERSION", ""),
 				ValidateFunc: validation.StringMatch(regexp.MustCompile(`^([0-9]\.[0-9]\.[0-9]((\.[pP]\d+[a-z]?)|[a-z])?)?$`), "Invalid Version Number"),
 				Description:  "SOLIDServer Version in case API user does not have admin permissions",
+			},
+			"proxy_url": {
+				Type:             schema.TypeString,
+				Required:         false,
+				Optional:         true,
+				Default:          schema.EnvDefaultFunc("SOLIDServer_PROXY_URL", ""),
+				Description:      "URL for a proxy to be used for SOLIDServer connectivity. Empty or unspecified means no proxy (direct connectivity). Supported URL schemes are 'http', 'https', and 'socks5'. If the scheme is empty, 'http' is assumed",
+				ValidateDiagFunc: validateProxyURLValue,
 			},
 		},
 
@@ -128,6 +139,32 @@ func ProviderConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 		d.Get("additional_trust_certs_file").(string),
 		d.Get("timeout").(int),
 		d.Get("solidserverversion").(string),
+		d.Get("proxy_url").(string),
 	)
 	return s, err
+}
+
+func validateProxyURLValue(value interface{}, path cty.Path) diag.Diagnostics {
+	proxyURLValue := value.(string)
+
+	// Empty value corresponds to no configured proxy
+	if proxyURLValue == "" {
+		return nil
+	}
+
+	proxyURL, err := url.Parse(proxyURLValue)
+	if err != nil {
+		return diag.FromErr(path.NewErrorf("invalid url: %w", err))
+	}
+
+	if proxyURL.Scheme != "" {
+		// Supported schemes are taken from the golang `http.Transport` type Proxy field docs
+		// https://pkg.go.dev/net/http#Transport
+		validSchemes := map[string]bool{"http": true, "https": true, "socks5": true}
+		if _, ok := validSchemes[proxyURL.Scheme]; !ok {
+			return diag.FromErr(path.NewErrorf("unsupported proxy url scheme: %s", proxyURL.Scheme))
+		}
+	}
+
+	return nil
 }
