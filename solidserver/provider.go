@@ -65,7 +65,7 @@ func Provider() *schema.Provider {
 				Type:             schema.TypeString,
 				Required:         false,
 				Optional:         true,
-				Default:          schema.EnvDefaultFunc("SOLIDServer_PROXY_URL", ""),
+				DefaultFunc:      schema.EnvDefaultFunc("SOLIDServer_PROXY_URL", ""),
 				Description:      "URL for a proxy to be used for SOLIDServer connectivity. Empty or unspecified means no proxy (direct connectivity). Supported URL schemes are 'http', 'https', and 'socks5'. If the scheme is empty, 'http' is assumed",
 				ValidateDiagFunc: validateProxyURLValue,
 			},
