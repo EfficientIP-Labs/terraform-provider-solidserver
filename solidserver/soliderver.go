@@ -236,6 +236,10 @@ func (s *SOLIDserver) Request(method string, service string, parameters *url.Val
 	apiclient := gorequest.New()
 	apiclient.Proxy(s.ProxyURL)
 
+	if s.ProxyURL != "" {
+		tflog.Debug(s.Ctx, fmt.Sprintf("Using proxy URL: %q\n", s.ProxyURL))
+	}
+
 	if s.Authenticated == false {
 		apiclient.Retry(3, time.Duration(rand.Intn(15)+1)*time.Second, http.StatusTooManyRequests, http.StatusInternalServerError)
 	} else {
