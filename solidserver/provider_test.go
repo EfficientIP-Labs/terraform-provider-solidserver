@@ -2,12 +2,13 @@ package solidserver
 
 import (
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"log"
 	"os"
 	"testing"
+
+	"github.com/hashicorp/go-cty/cty"
+	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 var testProviders map[string]terraform.ResourceProvider
@@ -40,5 +41,51 @@ func init() {
 	testProvider = Provider().(*schema.Provider)
 	testProviders = map[string]terraform.ResourceProvider{
 		"solidserver": testProvider,
+	}
+}
+
+func TestValidateProxyURLValue(t *testing.T) {
+
+	type testCase struct {
+		URL   string
+		IsErr bool
+	}
+
+	testCases := map[string]testCase{
+		"empty_proxy_url": {
+			URL: "",
+		},
+		"no_scheme_url": {
+			URL: "proxy.example.com",
+		},
+		"http_url": {
+			URL: "http://proxy.example.com",
+		},
+		"https_url": {
+			URL: "https://proxy.example.com",
+		},
+		"socks5_url": {
+			URL: "socks5://proxy.example.com",
+		},
+		"invalid_url": {
+			URL:   "invalid url:",
+			IsErr: true,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			result := validateProxyURLValue(tc.URL, cty.GetAttrPath("proxy_url"))
+
+			if tc.IsErr {
+				if !result.HasError() {
+					t.Errorf("expected error")
+				}
+			} else {
+				if result.HasError() {
+					t.Errorf("unexpected error: %+v", result)
+				}
+			}
+		})
 	}
 }
