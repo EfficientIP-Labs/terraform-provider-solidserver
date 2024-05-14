@@ -51,3 +51,4 @@ provider "solidserver" {
 - `solidserverversion` (String) SOLIDServer Version in case API user does not have admin permissions
 - `sslverify` (Boolean) Enable/Disable ssl verify (Default : enabled)
 - `timeout` (Number) API call timeout value in seconds (Default 10s)
+- `proxy_url` (String) URL for a proxy to be used for SOLIDServer connectivity.

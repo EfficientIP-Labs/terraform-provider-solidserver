@@ -7,9 +7,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/parnurzeal/gorequest"
 	"io/ioutil"
 	"math/rand"
 	"net"
@@ -19,6 +16,10 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/parnurzeal/gorequest"
 )
 
 type HttpRequestFunc func(*gorequest.SuperAgent, string) *gorequest.SuperAgent
@@ -45,9 +46,10 @@ type SOLIDserver struct {
 	Timeout                  int
 	Version                  int
 	Authenticated            bool
+	ProxyURL                 string
 }
 
-func NewSOLIDserver(ctx context.Context, host string, username string, password string, sslverify bool, certsfile string, timeout int, version string) (*SOLIDserver, diag.Diagnostics) {
+func NewSOLIDserver(ctx context.Context, host string, username string, password string, sslverify bool, certsfile string, timeout int, version string, proxyURL string) (*SOLIDserver, diag.Diagnostics) {
 	s := &SOLIDserver{
 		Ctx:                      ctx,
 		Host:                     host,
@@ -59,6 +61,7 @@ func NewSOLIDserver(ctx context.Context, host string, username string, password 
 		Timeout:                  timeout,
 		Version:                  0,
 		Authenticated:            false,
+		ProxyURL:                 proxyURL,
 	}
 
 	if err := s.GetVersion(version); err != nil {
@@ -161,6 +164,7 @@ KeepTrying:
 func (s *SOLIDserver) GetVersion(version string) diag.Diagnostics {
 
 	apiclient := gorequest.New()
+	apiclient.Proxy(s.ProxyURL)
 
 	parameters := url.Values{}
 	parameters.Add("WHERE", "member_is_me='1'")
@@ -230,6 +234,11 @@ func (s *SOLIDserver) Request(method string, service string, parameters *url.Val
 	var err error = nil
 
 	apiclient := gorequest.New()
+	apiclient.Proxy(s.ProxyURL)
+
+	if s.ProxyURL != "" {
+		tflog.Debug(s.Ctx, fmt.Sprintf("Using proxy URL: %q\n", s.ProxyURL))
+	}
 
 	if s.Authenticated == false {
 		apiclient.Retry(3, time.Duration(rand.Intn(15)+1)*time.Second, http.StatusTooManyRequests, http.StatusInternalServerError)
