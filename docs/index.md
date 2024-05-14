@@ -48,7 +48,7 @@ provider "solidserver" {
 ### Optional
 
 - `additional_trust_certs_file` (String) PEM formatted file with additional certificates to trust for TLS connection
+- `proxy_url` (String) URL for a proxy to be used for SOLIDServer connectivity. Empty or unspecified means no proxy (direct connectivity). Supported URL schemes are 'http', 'https', and 'socks5'. If the scheme is empty, 'http' is assumed
 - `solidserverversion` (String) SOLIDServer Version in case API user does not have admin permissions
 - `sslverify` (Boolean) Enable/Disable ssl verify (Default : enabled)
 - `timeout` (Number) API call timeout value in seconds (Default 10s)
-- `proxy_url` (String) URL for a proxy to be used for SOLIDServer connectivity.
