@@ -58,9 +58,24 @@ func dataSourceipsubnet() *schema.Resource {
 				Description: "The terminal property of the IP subnet.",
 				Computed:    true,
 			},
+			"vlan_domain": {
+				Type:        schema.TypeString,
+				Description: "The optional vlan Domain associated with the subnet.",
+				Computed:    true,
+			},
+			"vlan_range": {
+				Type:        schema.TypeString,
+				Description: "The optional vlan Range associated with the subnet.",
+				Computed:    true,
+			},
 			"vlan_id": {
 				Type:        schema.TypeInt,
 				Description: "The optional vlan ID associated with the subnet.",
+				Computed:    true,
+			},
+			"vlan_name": {
+				Type:        schema.TypeString,
+				Description: "The optional vlan Name associated with the subnet.",
 				Computed:    true,
 			},
 			"gateway": {
@@ -124,8 +139,21 @@ func dataSourceipsubnetRead(ctx context.Context, d *schema.ResourceData, meta in
 				d.Set("terminal", false)
 			}
 
-			if vlanID, vlanIDExist := buf[0]["vlmvlan_vlan_id"]; vlanIDExist {
+			if vlanDomain, vlanDomainExist := buf[0]["vlmdomain_name"].(string); vlanDomainExist && vlanDomain != "#" {
+				d.Set("vlan_domain", vlanDomain)
+			}
+
+			if vlanRange, vlanRangeExist := buf[0]["vlmrange_name"].(string); vlanRangeExist && vlanRange != "#" {
+				d.Set("vlan_range", vlanRange)
+			}
+
+			if vlanID, vlanIDExist := buf[0]["vlmvlan_vlan_id"].(string); vlanIDExist && vlanID != "0" {
+				vlanID, _ := strconv.Atoi(vlanID)
 				d.Set("vlan_id", vlanID)
+			}
+
+			if vlanName, vlanNameExist := buf[0]["vlmvlan_name"].(string); vlanNameExist && vlanName != "" {
+				d.Set("vlan_name", vlanName)
 			}
 
 			d.Set("class", buf[0]["subnet_class_name"].(string))

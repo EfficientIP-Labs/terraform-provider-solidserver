@@ -68,6 +68,31 @@ func dataSourceipsubnetquery() *schema.Resource {
 				Description: "The IP subnet netmask.",
 				Computed:    true,
 			},
+			"terminal": {
+				Type:        schema.TypeBool,
+				Description: "The terminal property of the IP subnet.",
+				Computed:    true,
+			},
+			"vlan_domain": {
+				Type:        schema.TypeString,
+				Description: "The optional vlan Domain associated with the subnet.",
+				Computed:    true,
+			},
+			"vlan_range": {
+				Type:        schema.TypeString,
+				Description: "The optional vlan Range associated with the subnet.",
+				Computed:    true,
+			},
+			"vlan_id": {
+				Type:        schema.TypeInt,
+				Description: "The optional vlan ID associated with the subnet.",
+				Computed:    true,
+			},
+			"vlan_name": {
+				Type:        schema.TypeString,
+				Description: "The optional vlan Name associated with the subnet.",
+				Computed:    true,
+			},
 			"gateway": {
 				Type:        schema.TypeString,
 				Description: "The subnet's computed gateway.",
@@ -122,6 +147,7 @@ func dataSourceipsubnetqueryRead(ctx context.Context, d *schema.ResourceData, me
 			d.Set("address", address)
 			d.Set("prefix", prefix)
 			d.Set("prefix_size", prefix_length)
+			d.Set("netmask", prefixlengthtohexip(prefix_length))
 
 			if buf[0]["is_terminal"].(string) == "1" {
 				d.Set("terminal", true)
@@ -129,7 +155,22 @@ func dataSourceipsubnetqueryRead(ctx context.Context, d *schema.ResourceData, me
 				d.Set("terminal", false)
 			}
 
-			d.Set("netmask", prefixlengthtohexip(prefix_length))
+			if vlanDomain, vlanDomainExist := buf[0]["vlmdomain_name"].(string); vlanDomainExist && vlanDomain != "#" {
+				d.Set("vlan_domain", vlanDomain)
+			}
+
+			if vlanRange, vlanRangeExist := buf[0]["vlmrange_name"].(string); vlanRangeExist && vlanRange != "#" {
+				d.Set("vlan_range", vlanRange)
+			}
+
+			if vlanID, vlanIDExist := buf[0]["vlmvlan_vlan_id"].(string); vlanIDExist && vlanID != "0" {
+				vlanID, _ := strconv.Atoi(vlanID)
+				d.Set("vlan_id", vlanID)
+			}
+
+			if vlanName, vlanNameExist := buf[0]["vlmvlan_name"].(string); vlanNameExist && vlanName != "" {
+				d.Set("vlan_name", vlanName)
+			}
 
 			d.Set("class", buf[0]["subnet_class_name"].(string))
 
