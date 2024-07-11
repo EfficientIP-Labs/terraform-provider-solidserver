@@ -102,6 +102,8 @@ func resourceipsubnet() *schema.Resource {
 				ForceNew:    true,
 				Default:     true,
 			},
+			//FIXME VLAN Domain
+			//FIXME VLAN ID
 			"class": {
 				Type:        schema.TypeString,
 				Description: "The class associated to the IP subnet.",
@@ -186,6 +188,8 @@ func resourceipsubnetCreate(ctx context.Context, d *schema.ResourceData, meta in
 		} else {
 			parameters.Add("is_terminal", "0")
 		}
+
+		//FIXME Specify vlmvlan_id (previously retrieved from helper based on vlan domain and vlan ID)
 
 		// Building class_parameters
 		classParameters := url.Values{}
@@ -433,6 +437,8 @@ func resourceipsubnetRead(ctx context.Context, d *schema.ResourceData, meta inte
 				d.Set("terminal", false)
 			}
 
+			//FIXME if vlmvlan_id != 0 retrieve info from vlan
+
 			// Updating local class_parameters
 			currentClassParameters := d.Get("class_parameters").(map[string]interface{})
 			retrievedClassParameters, _ := url.ParseQuery(buf[0]["subnet_class_parameters"].(string))
@@ -508,6 +514,14 @@ func resourceipsubnetImportState(ctx context.Context, d *schema.ResourceData, me
 			d.Set("gateway_offset", 0)
 
 			d.Set("class", buf[0]["subnet_class_name"].(string))
+
+			if buf[0]["is_terminal"].(string) == "1" {
+				d.Set("terminal", true)
+			} else {
+				d.Set("terminal", false)
+			}
+
+			//FIXME if vlmvlan_id != 0 retrieve info from vlan
 
 			// Setting local class_parameters
 			currentClassParameters := d.Get("class_parameters").(map[string]interface{})
