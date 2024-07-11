@@ -96,6 +96,20 @@ func resourceip6subnet() *schema.Resource {
 				ForceNew:    true,
 				Default:     true,
 			},
+			"vlan_domain": {
+				Type:        schema.TypeString,
+				Description: "The VLAN Domain associated to the IPv6 subnet.",
+				Optional:    true,
+				ForceNew:    false,
+				Default:     "",
+			},
+			"vlan_id": {
+				Type:        schema.TypeInt,
+				Description: "The VLAN ID associated to the IPv6 subnet. Default is 0 (No VLAN).",
+				Optional:    true,
+				ForceNew:    false,
+				Default:     0,
+			},
 			"class": {
 				Type:        schema.TypeString,
 				Description: "The class associated to the IPv6 subnet.",
@@ -120,12 +134,29 @@ func resourceip6subnetCreate(ctx context.Context, d *schema.ResourceData, meta i
 	blockInfo := make(map[string]interface{})
 	s := meta.(*SOLIDserver)
 	var gateway string = ""
+	vlmVlanID := ""
 
 	// Gather required ID(s) from provided information
 	siteID, siteErr := ipsiteidbyname(d.Get("space").(string), meta)
 	if siteErr != nil {
 		// Reporting a failure
 		return diag.FromErr(siteErr)
+	}
+
+	// Retrieve vlmVlanID Information from the provided VLAN ID
+	if d.Get("vlan_id").(int) > 0 {
+		if len(d.Get("vlan_domain").(string)) > 0 {
+			var vlmVlanIDErr error = nil
+
+			vlmVlanID, vlmVlanIDErr = vlanidbyinfo(d.Get("vlan_domain").(string), d.Get("vlan_id").(int), meta)
+
+			if vlmVlanIDErr != nil {
+				// Reporting a failure
+				return diag.FromErr(vlmVlanIDErr)
+			}
+		} else {
+			return diag.Errorf("Can't associate an IP subnet with VLAN ID %d without specifying a VLAN Domain", d.Get("vlan_id").(int))
+		}
 	}
 
 	// If a block is specified, look for free IP subnet within this block
@@ -178,6 +209,12 @@ func resourceip6subnetCreate(ctx context.Context, d *schema.ResourceData, meta i
 			parameters.Add("is_terminal", "1")
 		} else {
 			parameters.Add("is_terminal", "0")
+		}
+
+		// Specify the VLAN if applicable
+		if len(vlmVlanID) > 0 {
+			parameters.Add("vlmvlan_id", vlmVlanID)
+			tflog.Debug(ctx, fmt.Sprintf("Subnet associated with vlmVlanID: %s\n", vlmVlanID))
 		}
 
 		// Building class_parameters
@@ -254,6 +291,7 @@ func resourceip6subnetCreate(ctx context.Context, d *schema.ResourceData, meta i
 
 func resourceip6subnetUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
+	vlmVlanID := ""
 
 	// Building parameters
 	parameters := url.Values{}
@@ -266,6 +304,28 @@ func resourceip6subnetUpdate(ctx context.Context, d *schema.ResourceData, meta i
 		parameters.Add("is_terminal", "1")
 	} else {
 		parameters.Add("is_terminal", "0")
+	}
+
+	// Retrieve vlmVlanID Information from the provided VLAN ID
+	if d.Get("vlan_id").(int) > 0 {
+		if len(d.Get("vlan_domain").(string)) > 0 {
+			var vlmVlanIDErr error = nil
+
+			vlmVlanID, vlmVlanIDErr = vlanidbyinfo(d.Get("vlan_domain").(string), d.Get("vlan_id").(int), meta)
+
+			if vlmVlanIDErr != nil {
+				// Reporting a failure
+				return diag.FromErr(vlmVlanIDErr)
+			}
+		} else {
+			return diag.Errorf("Can't associate an IP subnet with VLAN ID %d without specifying a VLAN Domain", d.Get("vlan_id").(int))
+		}
+	}
+
+	// Specify the VLAN if applicable
+	if len(vlmVlanID) > 0 {
+		parameters.Add("vlmvlan_id", vlmVlanID)
+		tflog.Debug(ctx, fmt.Sprintf("Subnet associated with vlmVlanID: %s\n", vlmVlanID))
 	}
 
 	// Building class_parameters
@@ -430,6 +490,15 @@ func resourceip6subnetRead(ctx context.Context, d *schema.ResourceData, meta int
 				d.Set("terminal", false)
 			}
 
+			if buf[0]["vlmdomain_name"].(string) != "#" {
+				d.Set("vlan_domain", buf[0]["vlmdomain_name"].(string))
+			}
+
+			if _, ok := buf[0]["vlmvlan_vlan_id"]; ok {
+				vlanID, _ := strconv.Atoi(buf[0]["vlmvlan_vlan_id"].(string))
+				d.Set("vlan_id", vlanID)
+			}
+
 			// Updating local class_parameters
 			currentClassParameters := d.Get("class_parameters").(map[string]interface{})
 			retrievedClassParameters, _ := url.ParseQuery(buf[0]["subnet6_class_parameters"].(string))
@@ -497,6 +566,15 @@ func resourceip6subnetImportState(ctx context.Context, d *schema.ResourceData, m
 				d.Set("terminal", true)
 			} else {
 				d.Set("terminal", false)
+			}
+
+			if buf[0]["vlmdomain_name"].(string) != "#" {
+				d.Set("vlan_domain", buf[0]["vlmdomain_name"].(string))
+			}
+
+			if _, ok := buf[0]["vlmvlan_vlan_id"]; ok {
+				vlanID, _ := strconv.Atoi(buf[0]["vlmvlan_vlan_id"].(string))
+				d.Set("vlan_id", vlanID)
 			}
 
 			// Setting local class_parameters

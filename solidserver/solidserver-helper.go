@@ -581,6 +581,35 @@ func vlandomainidbyname(vlmdomainName string, meta interface{}) (string, error) 
 	return "", err
 }
 
+// Return the oid of a vlan (vlmvlan_id) from vlmdomain_name and vlan_id
+// Or an empty string in case of failure
+func vlanidbyinfo(vlmdomainName string, vlmvlanvlanID int, meta interface{}) (string, error) {
+	s := meta.(*SOLIDserver)
+
+	// Building parameters
+	parameters := url.Values{}
+	parameters.Add("WHERE", "vlmdomain_name='"+vlmdomainName+"' AND vlmvlan_vlan_id='"+strconv.Itoa(vlmvlanvlanID)+"'")
+
+	// Sending the read request
+	resp, body, err := s.Request("get", "rest/vlmvlan_list", &parameters)
+
+	if err == nil {
+		var buf [](map[string]interface{})
+		json.Unmarshal([]byte(body), &buf)
+
+		// Checking the answer
+		if resp.StatusCode == 200 && len(buf) > 0 {
+			if vlmvlanID, vlmvlanIDExist := buf[0]["vlmvlan_id"].(string); vlmvlanIDExist {
+				return vlmvlanID, nil
+			}
+		}
+	}
+
+	tflog.Debug(s.Ctx, fmt.Sprintf("Unable to find VLAN ID %d within VLAN Domain\n", vlmvlanvlanID, vlmdomainName))
+
+	return "", err
+}
+
 // Return the oid of a subnet from site_id, subnet_name and is_terminal property
 // Or an empty string in case of failure
 func ipsubnetidbyname(siteID string, subnetName string, terminal bool, meta interface{}) (string, error) {
