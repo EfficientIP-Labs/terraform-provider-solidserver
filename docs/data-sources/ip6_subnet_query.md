@@ -42,4 +42,8 @@ data "solidserver_ip6_subnet_query" "mySecondIPv6SubnetQueriedData" {
 - `prefix_size` (Number) The IPv6 subnet's prefix length (ex: 64 for a '/64').
 - `space` (String) The space associated to the IPv6 subnet.
 - `terminal` (Boolean) The terminal property of the IPv6 subnet.
+- `vlan_domain` (String) The optional vlan Domain associated with the subnet.
+- `vlan_id` (Number) The optional vlan ID associated with the subnet.
+- `vlan_name` (String) The optional vlan Name associated with the subnet.
+- `vlan_range` (String) The optional vlan Range associated with the subnet.
 

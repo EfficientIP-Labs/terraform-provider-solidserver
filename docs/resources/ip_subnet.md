@@ -53,6 +53,8 @@ resource "solidserver_ip_subnet" "myFirstIPSubnet" {
 - `gateway_offset` (Number) Offset for creating the gateway. Default is 0 (No gateway).
 - `request_ip` (String) The optionally requested subnet IP address.
 - `terminal` (Boolean) The terminal property of the IP subnet.
+- `vlan_domain` (String) The VLAN Domain associated to the IP subnet.
+- `vlan_id` (Number) The VLAN ID associated to the IP subnet. Default is 0 (No VLAN).
 
 ### Read-Only
 

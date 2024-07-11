@@ -53,6 +53,8 @@ resource "solidserver_ip6_subnet" "myFirstIP6Subnet" {
 - `gateway_offset` (Number) Offset for creating the gateway. Default is 0 (No gateway).
 - `request_ip` (String) The optionally requested subnet IPv6 address.
 - `terminal` (Boolean) The terminal property of the IPv6 subnet.
+- `vlan_domain` (String) The VLAN Domain associated to the IPv6 subnet.
+- `vlan_id` (Number) The VLAN ID associated to the IPv6 subnet. Default is 0 (No VLAN).
 
 ### Read-Only
 
