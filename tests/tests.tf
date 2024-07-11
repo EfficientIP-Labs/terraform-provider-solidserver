@@ -128,6 +128,8 @@ resource "solidserver_ip_subnet" "mySecondIPSubnet" {
   prefix_size      = 29
   name             = "mySecondIPSubnet"
   gateway_offset   = -1
+  vlan_domain      = solidserver_vlan_domain.myFirstVxlanDomain.name
+  vlan_id          = solidserver_vlan.myFirstVxlan.vlan_id
   class            = "VIRTUAL"
   class_parameters = {
     vnid = "12666"
@@ -226,6 +228,8 @@ resource "solidserver_ip6_subnet" "mySecondIP6Subnet" {
   prefix_size      = 64
   name             = "mySecondIP6Subnet"
   gateway_offset   = 1
+  vlan_domain      = solidserver_vlan_domain.myFirstVxlanDomain.name
+  vlan_id          = solidserver_vlan.myFirstVxlan.vlan_id
   class            = "VIRTUAL"
   class_parameters = {
     vnid = "12666"
