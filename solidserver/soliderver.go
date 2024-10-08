@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"golang.org/x/crypto/sha3"
 	"io/ioutil"
 	"math/rand"
 	"net"
@@ -38,6 +39,7 @@ const regexpNetworkAcl = `^(([0-9]{1,3}\.){3}[0-9]{1,3}(\/([0-9]|[1-2][0-9]|3[0-
 type SOLIDserver struct {
 	Ctx                      context.Context
 	Host                     string
+	UseToken                 bool
 	Username                 string
 	Password                 string
 	BaseUrl                  string
@@ -49,10 +51,11 @@ type SOLIDserver struct {
 	ProxyURL                 string
 }
 
-func NewSOLIDserver(ctx context.Context, host string, username string, password string, sslverify bool, certsfile string, timeout int, version string, proxyURL string) (*SOLIDserver, diag.Diagnostics) {
+func NewSOLIDserver(ctx context.Context, host string, use_token bool, username string, password string, sslverify bool, certsfile string, timeout int, version string, proxyURL string) (*SOLIDserver, diag.Diagnostics) {
 	s := &SOLIDserver{
 		Ctx:                      ctx,
 		Host:                     host,
+		UseToken:                 use_token,
 		Username:                 username,
 		Password:                 password,
 		BaseUrl:                  "https://" + host,
@@ -69,6 +72,12 @@ func NewSOLIDserver(ctx context.Context, host string, username string, password 
 	}
 
 	return s, nil
+}
+
+func GenerateSignature(url string, method string, secret string, ts int64) [32]byte {
+	s := fmt.Sprintf("%s\n%d\n%s\n%s", secret, ts, method, url)
+	buf := []byte(s)
+	return sha3.Sum256(buf)
 }
 
 func SubmitRequest(s *SOLIDserver, apiclient *gorequest.SuperAgent, method string, service string, parameters string) (*http.Response, string, error) {
@@ -134,13 +143,22 @@ KeepTrying:
 		time.Sleep(time.Duration(rand.Intn(t.msSweep)) * time.Millisecond)
 
 		requestUrl = fmt.Sprintf("%s/%s?%s", s.BaseUrl, service, parameters)
+		if s.UseToken == true {
+			timestamp := time.Now().Unix()
+			signature := GenerateSignature(requestUrl, method, s.Password, timestamp)
+			resp, body, errs = httpFunc(apiclient, requestUrl).
+				TLSClientConfig(&tls.Config{InsecureSkipVerify: !s.SSLVerify, RootCAs: rootCAs}).
+				Set("X-SDS-TS", fmt.Sprintf("%d", timestamp)).
+				Set("Authorization", fmt.Sprintf("SDS %s:%x", s.Username, signature)).
+				End()
 
-		resp, body, errs = httpFunc(apiclient, requestUrl).
-			TLSClientConfig(&tls.Config{InsecureSkipVerify: !s.SSLVerify, RootCAs: rootCAs}).
-			Set("X-IPM-Username", base64.StdEncoding.EncodeToString([]byte(s.Username))).
-			Set("X-IPM-Password", base64.StdEncoding.EncodeToString([]byte(s.Password))).
-			End()
-
+		} else {
+			resp, body, errs = httpFunc(apiclient, requestUrl).
+				TLSClientConfig(&tls.Config{InsecureSkipVerify: !s.SSLVerify, RootCAs: rootCAs}).
+				Set("X-IPM-Username", base64.StdEncoding.EncodeToString([]byte(s.Username))).
+				Set("X-IPM-Password", base64.StdEncoding.EncodeToString([]byte(s.Password))).
+				End()
+		}
 		if errs == nil {
 			return resp, body, nil
 		}

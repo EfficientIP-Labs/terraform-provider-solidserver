@@ -76,15 +76,27 @@ SOLIDServer provider supports the following arguments:
 
 * `username` - (Required) Username used to establish the connection. Can be stored in `SOLIDServer_USERNAME` environment variable.
 * `password` - (Required) Password associated with the username. Can be stored in `SOLIDServer_PASSWORD` environment variable.
+* `use_token` - (Optional) Enable/Disable API Token mode for username/password 
 * `host` - (Required) IP Address of the SOLIDServer REST API endpoint. Can be stored in `SOLIDServer_HOST` environment variable.
 * `sslverify` - (Optional) Enable/Disable ssl certificate check. Can be stored in `SOLIDServer_SSLVERIFY` environment variable.
 * `additional_trust_certs_file` - (Optional) Path to a file containing concatenated PEM-formatted certificates that will be trusted in addition to system defaults.
 * `solidserverversion` - (Optional) The version of the SOLIDserver to interact with. This field is only for API users not able to retrieve this information dynamically.
 
+using username and password sample :
 ```
 provider "solidserver" {
     username = "username"
     password = "password"
+    host  = "192.168.0.1"
+    sslverify = "false"
+}
+```
+using token and secret :
+```
+provider "solidserver" {
+    use_token = true
+    username = "token"
+    password = "secret"
     host  = "192.168.0.1"
     sslverify = "false"
 }

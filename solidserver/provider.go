@@ -20,6 +20,12 @@ func Provider() *schema.Provider {
 				DefaultFunc: schema.MultiEnvDefaultFunc([]string{"SOLIDSERVER_HOST", "SOLIDServer_HOST"}, nil),
 				Description: "SOLIDServer Hostname or IP address",
 			},
+			"use_token": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				DefaultFunc: schema.MultiEnvDefaultFunc([]string{"SOLIDSERVER_USE_TOKEN", "SOLIDServer_USE_TOKEN"}, nil),
+				Description: "SOLIDServer username/password are token/secret",
+			},
 			"username": {
 				Type:        schema.TypeString,
 				Required:    true,
@@ -133,6 +139,7 @@ func ProviderConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 	s, err := NewSOLIDserver(
 		ctx,
 		d.Get("host").(string),
+		d.Get("use_token").(bool),
 		d.Get("username").(string),
 		d.Get("password").(string),
 		d.Get("sslverify").(bool),
