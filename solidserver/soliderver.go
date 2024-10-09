@@ -219,6 +219,10 @@ func (s *SOLIDserver) GetVersion(version string) diag.Diagnostics {
 	}
 
 	if err == nil && (400 <= resp.StatusCode && resp.StatusCode < 500) {
+		if resp.StatusCode == 412 {
+			return diag.Errorf("Error retrieving SOLIDserver Version (Possible time drift). Consider investigating time drift issue.\n")
+		}
+
 		if version != "" {
 			StrVersion := strings.Split(version, ".")
 
