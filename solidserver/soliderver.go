@@ -75,7 +75,7 @@ func NewSOLIDserver(ctx context.Context, host string, use_token bool, username s
 }
 
 func GenerateSignature(url string, method string, secret string, ts int64) [32]byte {
-	s := fmt.Sprintf("%s\n%d\n%s\n%s", secret, ts, method, url)
+	s := fmt.Sprintf("%s\n%d\n%s\n%s", secret, ts, strings.ToUpper(method), url)
 	buf := []byte(s)
 	return sha3.Sum256(buf)
 }
@@ -146,6 +146,7 @@ KeepTrying:
 		if s.UseToken == true {
 			timestamp := time.Now().Unix()
 			signature := GenerateSignature(requestUrl, method, s.Password, timestamp)
+			tflog.Debug(s.Ctx, fmt.Sprintf("Timestamp:%d\nrequestUrl:%s\nmethod:%s\nToken:%s\nSecret:%s\nSignature:%x\n", timestamp, requestUrl, method, s.Username, s.Password, signature))
 			resp, body, errs = httpFunc(apiclient, requestUrl).
 				TLSClientConfig(&tls.Config{InsecureSkipVerify: !s.SSLVerify, RootCAs: rootCAs}).
 				Set("X-SDS-TS", fmt.Sprintf("%d", timestamp)).
