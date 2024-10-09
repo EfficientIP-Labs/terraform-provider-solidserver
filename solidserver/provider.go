@@ -30,13 +30,13 @@ func Provider() *schema.Provider {
 				Type:        schema.TypeString,
 				Required:    true,
 				DefaultFunc: schema.MultiEnvDefaultFunc([]string{"SOLIDSERVER_USERNAME", "SOLIDServer_USERNAME"}, nil),
-				Description: "SOLIDServer API user's ID",
+				Description: "SOLIDServer API User ID or Token ID",
 			},
 			"password": {
 				Type:        schema.TypeString,
 				Required:    true,
 				DefaultFunc: schema.MultiEnvDefaultFunc([]string{"SOLIDSERVER_PASSWORD", "SOLIDServer_PASSWORD"}, nil),
-				Description: "SOLIDServer API user's password",
+				Description: "SOLIDServer API user password or token secret",
 			},
 			"sslverify": {
 				Type:        schema.TypeBool,
