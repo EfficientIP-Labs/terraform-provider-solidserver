@@ -15,10 +15,11 @@ func Provider() *schema.Provider {
 	return &schema.Provider{
 		Schema: map[string]*schema.Schema{
 			"host": {
-				Type:        schema.TypeString,
-				Required:    true,
-				DefaultFunc: schema.MultiEnvDefaultFunc([]string{"SOLIDSERVER_HOST", "SOLIDServer_HOST"}, nil),
-				Description: "SOLIDServer Hostname or IP address",
+				Type:         schema.TypeString,
+				Required:     true,
+				DefaultFunc:  schema.MultiEnvDefaultFunc([]string{"SOLIDSERVER_HOST", "SOLIDServer_HOST"}, nil),
+				ValidateFunc: validation.StringIsNotEmpty,
+				Description:  "SOLIDServer Hostname or IP address",
 			},
 			"use_token": {
 				Type:        schema.TypeBool,
@@ -27,16 +28,18 @@ func Provider() *schema.Provider {
 				Description: "SOLIDServer username/password are token/secret",
 			},
 			"username": {
-				Type:        schema.TypeString,
-				Required:    true,
-				DefaultFunc: schema.MultiEnvDefaultFunc([]string{"SOLIDSERVER_USERNAME", "SOLIDServer_USERNAME"}, nil),
-				Description: "SOLIDServer API User ID or Token ID",
+				Type:         schema.TypeString,
+				Required:     true,
+				DefaultFunc:  schema.MultiEnvDefaultFunc([]string{"SOLIDSERVER_USERNAME", "SOLIDServer_USERNAME"}, nil),
+				ValidateFunc: validation.StringIsNotEmpty,
+				Description:  "SOLIDServer API User ID or Token ID",
 			},
 			"password": {
-				Type:        schema.TypeString,
-				Required:    true,
-				DefaultFunc: schema.MultiEnvDefaultFunc([]string{"SOLIDSERVER_PASSWORD", "SOLIDServer_PASSWORD"}, nil),
-				Description: "SOLIDServer API user password or token secret",
+				Type:         schema.TypeString,
+				Required:     true,
+				DefaultFunc:  schema.MultiEnvDefaultFunc([]string{"SOLIDSERVER_PASSWORD", "SOLIDServer_PASSWORD"}, nil),
+				ValidateFunc: validation.StringIsNotEmpty,
+				Description:  "SOLIDServer API user password or token secret",
 			},
 			"sslverify": {
 				Type:        schema.TypeBool,
