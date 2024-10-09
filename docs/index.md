@@ -42,8 +42,8 @@ provider "solidserver" {
 ### Required
 
 - `host` (String) SOLIDServer Hostname or IP address
-- `password` (String) SOLIDServer API user's password
-- `username` (String) SOLIDServer API user's ID
+- `password` (String) SOLIDServer API user password or token secret
+- `username` (String) SOLIDServer API User ID or Token ID
 
 ### Optional
 
@@ -52,3 +52,4 @@ provider "solidserver" {
 - `solidserverversion` (String) SOLIDServer Version in case API user does not have admin permissions
 - `sslverify` (Boolean) Enable/Disable ssl verify (Default : enabled)
 - `timeout` (Number) API call timeout value in seconds (Default 10s)
+- `use_token` (Boolean) SOLIDServer username/password are token/secret

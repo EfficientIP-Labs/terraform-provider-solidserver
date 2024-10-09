@@ -15,22 +15,31 @@ func Provider() *schema.Provider {
 	return &schema.Provider{
 		Schema: map[string]*schema.Schema{
 			"host": {
-				Type:        schema.TypeString,
-				Required:    true,
-				DefaultFunc: schema.MultiEnvDefaultFunc([]string{"SOLIDSERVER_HOST", "SOLIDServer_HOST"}, nil),
-				Description: "SOLIDServer Hostname or IP address",
+				Type:         schema.TypeString,
+				Required:     true,
+				DefaultFunc:  schema.MultiEnvDefaultFunc([]string{"SOLIDSERVER_HOST", "SOLIDServer_HOST"}, nil),
+				ValidateFunc: validation.StringIsNotEmpty,
+				Description:  "SOLIDServer Hostname or IP address",
+			},
+			"use_token": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				DefaultFunc: schema.MultiEnvDefaultFunc([]string{"SOLIDSERVER_USE_TOKEN", "SOLIDServer_USE_TOKEN"}, false),
+				Description: "SOLIDServer username/password are token/secret",
 			},
 			"username": {
-				Type:        schema.TypeString,
-				Required:    true,
-				DefaultFunc: schema.MultiEnvDefaultFunc([]string{"SOLIDSERVER_USERNAME", "SOLIDServer_USERNAME"}, nil),
-				Description: "SOLIDServer API user's ID",
+				Type:         schema.TypeString,
+				Required:     true,
+				DefaultFunc:  schema.MultiEnvDefaultFunc([]string{"SOLIDSERVER_USERNAME", "SOLIDServer_USERNAME"}, nil),
+				ValidateFunc: validation.StringIsNotEmpty,
+				Description:  "SOLIDServer API User ID or Token ID",
 			},
 			"password": {
-				Type:        schema.TypeString,
-				Required:    true,
-				DefaultFunc: schema.MultiEnvDefaultFunc([]string{"SOLIDSERVER_PASSWORD", "SOLIDServer_PASSWORD"}, nil),
-				Description: "SOLIDServer API user's password",
+				Type:         schema.TypeString,
+				Required:     true,
+				DefaultFunc:  schema.MultiEnvDefaultFunc([]string{"SOLIDSERVER_PASSWORD", "SOLIDServer_PASSWORD"}, nil),
+				ValidateFunc: validation.StringIsNotEmpty,
+				Description:  "SOLIDServer API user password or token secret",
 			},
 			"sslverify": {
 				Type:        schema.TypeBool,
@@ -133,6 +142,7 @@ func ProviderConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 	s, err := NewSOLIDserver(
 		ctx,
 		d.Get("host").(string),
+		d.Get("use_token").(bool),
 		d.Get("username").(string),
 		d.Get("password").(string),
 		d.Get("sslverify").(bool),

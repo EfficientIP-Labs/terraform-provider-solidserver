@@ -74,17 +74,29 @@ TF_ACC=1 go test solidserver -v -count=1 -tags "all"
 # Using the SOLIDserver provider
 SOLIDServer provider supports the following arguments:
 
-* `username` - (Required) Username used to establish the connection. Can be stored in `SOLIDServer_USERNAME` environment variable.
-* `password` - (Required) Password associated with the username. Can be stored in `SOLIDServer_PASSWORD` environment variable.
-* `host` - (Required) IP Address of the SOLIDServer REST API endpoint. Can be stored in `SOLIDServer_HOST` environment variable.
+* `username` - (Required) SOLIDServer API User ID or Token ID used to establish the connection. Can be stored in `SOLIDServer_USERNAME` environment variable.
+* `password` - (Required) SOLIDServer API user password or token secret. Can be stored in `SOLIDServer_PASSWORD` environment variable.
+* `use_token` - (Optional) Enable/Disable the use of API tokens instead of username/password Can be stored in `SOLIDServer_USE_TOKEN` environment variable.
+* `host` - (Required) IP Address/FQDN of the SOLIDServer API endpoint. Can be stored in `SOLIDServer_HOST` environment variable.
 * `sslverify` - (Optional) Enable/Disable ssl certificate check. Can be stored in `SOLIDServer_SSLVERIFY` environment variable.
 * `additional_trust_certs_file` - (Optional) Path to a file containing concatenated PEM-formatted certificates that will be trusted in addition to system defaults.
 * `solidserverversion` - (Optional) The version of the SOLIDserver to interact with. This field is only for API users not able to retrieve this information dynamically.
 
+## Using username and password authentication:
 ```
 provider "solidserver" {
     username = "username"
     password = "password"
+    host  = "192.168.0.1"
+    sslverify = "false"
+}
+```
+## Using token authentication:
+```
+provider "solidserver" {
+    use_token = true
+    username = "token_id"
+    password = "secret"
     host  = "192.168.0.1"
     sslverify = "false"
 }
