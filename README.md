@@ -82,7 +82,7 @@ SOLIDServer provider supports the following arguments:
 * `additional_trust_certs_file` - (Optional) Path to a file containing concatenated PEM-formatted certificates that will be trusted in addition to system defaults.
 * `solidserverversion` - (Optional) The version of the SOLIDserver to interact with. This field is only for API users not able to retrieve this information dynamically.
 
-using username and password sample :
+## Using username and password authentication:
 ```
 provider "solidserver" {
     username = "username"
@@ -91,11 +91,11 @@ provider "solidserver" {
     sslverify = "false"
 }
 ```
-using token and secret :
+## Using token authentication:
 ```
 provider "solidserver" {
     use_token = true
-    username = "token"
+    username = "token_id"
     password = "secret"
     host  = "192.168.0.1"
     sslverify = "false"
