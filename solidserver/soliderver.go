@@ -218,7 +218,7 @@ func (s *SOLIDserver) GetVersion(version string) diag.Diagnostics {
 		}
 	}
 
-	if err == nil && (resp.StatusCode <= 400 && resp.StatusCode < 500) {
+	if err == nil && (400 <= resp.StatusCode && resp.StatusCode < 500) {
 		if version != "" {
 			StrVersion := strings.Split(version, ".")
 
