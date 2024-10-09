@@ -23,7 +23,7 @@ func Provider() *schema.Provider {
 			"use_token": {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				DefaultFunc: schema.MultiEnvDefaultFunc([]string{"SOLIDSERVER_USE_TOKEN", "SOLIDServer_USE_TOKEN"}, nil),
+				DefaultFunc: schema.MultiEnvDefaultFunc([]string{"SOLIDSERVER_USE_TOKEN", "SOLIDServer_USE_TOKEN"}, false),
 				Description: "SOLIDServer username/password are token/secret",
 			},
 			"username": {
