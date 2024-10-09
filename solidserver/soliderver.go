@@ -146,7 +146,6 @@ KeepTrying:
 		if s.UseToken == true {
 			timestamp := time.Now().Unix()
 			signature := GenerateSignature(requestUrl, method, s.Password, timestamp)
-			tflog.Debug(s.Ctx, fmt.Sprintf("Timestamp:%d\nrequestUrl:%s\nmethod:%s\nToken:%s\nSecret:%s\nSignature:%x\n", timestamp, requestUrl, method, s.Username, s.Password, signature))
 			resp, body, errs = httpFunc(apiclient, requestUrl).
 				TLSClientConfig(&tls.Config{InsecureSkipVerify: !s.SSLVerify, RootCAs: rootCAs}).
 				Set("X-SDS-TS", fmt.Sprintf("%d", timestamp)).
