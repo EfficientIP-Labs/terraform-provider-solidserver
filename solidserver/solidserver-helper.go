@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"inet.af/netaddr"
+	//"go4.org/netipx"
+	"net/netip"
 	"math/big"
 	"net/url"
 	"sort"
@@ -210,7 +211,7 @@ func ip6tohexip6(ip string) string {
 // Convert standard IPv6 address string into expanded IPv6 address string
 // Return an empty string in case of failure
 func longip6toshortip6(ip string) string {
-	tmp, _ := netaddr.ParseIP(ip)
+	tmp, _ := netip.ParseAddr(ip)
 
 	if tmp.Is6() {
 		return tmp.String()
@@ -222,7 +223,7 @@ func longip6toshortip6(ip string) string {
 // Convert standard IPv6 address string into expanded IPv6 address string
 // Return an empty string in case of failure
 func shortip6tolongip6(ip string) string {
-	tmp, _ := netaddr.ParseIP(ip)
+	tmp, _ := netip.ParseAddr(ip)
 
 	if tmp.Is6() {
 		return tmp.StringExpanded()
@@ -279,8 +280,8 @@ func resourcediffsuppresscase(k, old, new string, d *schema.ResourceData) bool {
 
 // Ignore Different IPv6 Format
 func resourcediffsuppressIPv6Format(k, old, new string, d *schema.ResourceData) bool {
-	oldipv6, _ := netaddr.ParseIP(old)
-	newipv6, _ := netaddr.ParseIP(new)
+	oldipv6, _ := netip.ParseAddr(old)
+	newipv6, _ := netip.ParseAddr(new)
 
 	//fmt.Printf("(%v).String() -> %v\n", ipv6, newipv6.String())
 
