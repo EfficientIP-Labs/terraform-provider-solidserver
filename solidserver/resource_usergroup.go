@@ -30,13 +30,13 @@ func resourceusergroup() *schema.Resource {
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
-				Description: "The name of the group",
+				Description: "The name of the group.",
 				Required:    true,
 				ForceNew:    false,
 			},
 			"description": {
 				Type:        schema.TypeString,
-				Description: "The description of the group",
+				Description: "The description of the group.",
 				Required:    false,
 				Optional:    true,
 				ForceNew:    false,

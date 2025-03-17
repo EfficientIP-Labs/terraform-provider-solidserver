@@ -80,7 +80,7 @@ func resourcednszone() *schema.Resource {
 			},
 			"also_notify": {
 				Type:        schema.TypeList,
-				Description: "The list of IP addresses (Format <IP>:<Port>) that will receive zone change notifications in addition to the NS listed in the SOA",
+				Description: "The list of IP addresses (Format <IP>:<Port>) that will receive zone change notifications in addition to the NS listed in the SOA.",
 				Optional:    true,
 				ForceNew:    false,
 				Elem: &schema.Schema{

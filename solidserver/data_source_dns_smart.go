@@ -95,7 +95,7 @@ func dataSourcednssmart() *schema.Resource {
 			},
 			"class_parameters": {
 				Type:        schema.TypeMap,
-				Description: "The class parameters associated to the DNS SMART",
+				Description: "The class parameters associated to the DNS SMART.",
 				Computed:    true,
 			},
 		},

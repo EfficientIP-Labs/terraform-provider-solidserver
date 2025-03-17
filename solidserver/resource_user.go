@@ -30,19 +30,19 @@ func resourceuser() *schema.Resource {
 		Schema: map[string]*schema.Schema{
 			"login": {
 				Type:        schema.TypeString,
-				Description: "The login of the user",
+				Description: "The login of the user.",
 				Required:    true,
 				ForceNew:    false,
 			},
 			"password": {
 				Type:        schema.TypeString,
-				Description: "The password of the user",
+				Description: "The password of the user.",
 				Required:    true,
 				ForceNew:    false,
 			},
 			"groups": {
 				Type:        schema.TypeSet,
-				Description: "The group id set for this user",
+				Description: "The group id set for this user.",
 				Required:    true,
 				ForceNew:    false,
 				Elem: &schema.Schema{
@@ -52,28 +52,28 @@ func resourceuser() *schema.Resource {
 			},
 			"description": {
 				Type:        schema.TypeString,
-				Description: "The description of the user",
+				Description: "The description of the user.",
 				Required:    false,
 				Optional:    true,
 				ForceNew:    false,
 			},
 			"last_name": {
 				Type:        schema.TypeString,
-				Description: "The last name of the user",
+				Description: "The last name of the user.",
 				Required:    false,
 				Optional:    true,
 				ForceNew:    false,
 			},
 			"first_name": {
 				Type:        schema.TypeString,
-				Description: "The first name of the user",
+				Description: "The first name of the user.",
 				Required:    false,
 				Optional:    true,
 				ForceNew:    false,
 			},
 			"email": {
 				Type:        schema.TypeString,
-				Description: "The email address of the user",
+				Description: "The email address of the user.",
 				Required:    false,
 				Optional:    true,
 				ForceNew:    false,
