@@ -990,7 +990,7 @@ func ipaddressidbyip(siteID string, ipAddress string, meta interface{}) (string,
 	parameters.Add("WHERE", "site_id='"+siteID+"' AND "+"ip_addr='"+iptohexip(ipAddress)+"'")
 
 	// Sending the read request
-	resp, body, err := s.Request("get", "rest/ip_address_list", &parameters)
+	resp, body, err := s.Request("get", "rest/ip_used_address_list", &parameters)
 
 	if err == nil {
 		var buf [](map[string]interface{})
