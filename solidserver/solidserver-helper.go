@@ -618,7 +618,6 @@ func ipsubnetidbyname(siteID string, subnetName string, terminal bool, meta inte
 
 	// Building parameters
 	parameters := url.Values{}
-
 	whereClause := "site_id='" + siteID + "' AND " + "subnet_name='" + strings.ToLower(subnetName) + "'"
 
 	if terminal {
@@ -736,7 +735,6 @@ func ipsubnetinfobyname(siteID string, subnetName string, terminal bool, meta in
 
 	// Building parameters
 	parameters := url.Values{}
-
 	whereClause := "site_id='" + siteID + "' AND " + "subnet_name='" + strings.ToLower(subnetName) + "'"
 
 	if terminal {
@@ -805,7 +803,6 @@ func ip6subnetidbyname(siteID string, subnetName string, terminal bool, meta int
 
 	// Building parameters
 	parameters := url.Values{}
-
 	whereClause := "site_id='" + siteID + "' AND " + "subnet6_name='" + strings.ToLower(subnetName) + "'"
 
 	if terminal {
@@ -923,7 +920,6 @@ func ip6subnetinfobyname(siteID string, subnetName string, terminal bool, meta i
 
 	// Building parameters
 	parameters := url.Values{}
-
 	whereClause := "site_id='" + siteID + "' AND " + "subnet6_name='" + strings.ToLower(subnetName) + "'"
 
 	if terminal {
@@ -1538,6 +1534,7 @@ func dnsaddtosmart(smartName string, serverName string, serverRole string, meta 
 			// Otherwise proceed using the previous method
 			// Building parameters for retrieving SMART vdns_dns_group_role information
 			parameters := url.Values{}
+
 			parameters.Add("WHERE", "vdns_parent_name='"+smartName+"' AND dns_type!='vdns'")
 
 			// Sending the read request
@@ -1622,6 +1619,7 @@ func dnsdeletefromsmart(smartName string, serverName string, meta interface{}) b
 
 			// Building parameters for retrieving SMART vdns_dns_group_role information
 			parameters := url.Values{}
+
 			parameters.Add("WHERE", "vdns_parent_name='"+smartName+"' AND dns_type!='vdns'")
 
 			// Sending the read request

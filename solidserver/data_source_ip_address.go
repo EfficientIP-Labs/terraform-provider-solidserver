@@ -94,7 +94,7 @@ func dataSourceipaddressRead(ctx context.Context, d *schema.ResourceData, meta i
 	parameters.Add("WHERE", "site_name='"+d.Get("space").(string)+"' AND ip_addr='"+iptohexip(d.Get("address").(string))+"'")
 
 	// Sending the read request
-	resp, body, err := s.Request("get", "rest/ip_address_list", &parameters)
+	resp, body, err := s.Request("get", "rest/ip_used_address_list", &parameters)
 
 	if err == nil {
 		var buf [](map[string]interface{})

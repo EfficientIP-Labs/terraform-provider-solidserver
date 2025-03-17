@@ -59,7 +59,7 @@ func dataSourcednszone() *schema.Resource {
 			},
 			"class_parameters": {
 				Type:        schema.TypeMap,
-				Description: "The class parameters associated to IP space.",
+				Description: "The class parameters associated to the DNS zone.",
 				Computed:    true,
 			},
 		},
@@ -72,7 +72,6 @@ func dataSourcednszoneRead(ctx context.Context, d *schema.ResourceData, meta int
 
 	// Building parameters
 	parameters := url.Values{}
-
 	whereClause := "dnszone_name='" + d.Get("name").(string) + "'"
 
 	if view, ok := d.Get("view").(string); ok && view != "" {
