@@ -30,7 +30,7 @@ resource "solidserver_dns_zone" "myFirstZone" {
 
 ### Optional
 
-- `also_notify` (List of String) The list of IP addresses (Format <IP>:<Port>) that will receive zone change notifications in addition to the NS listed in the SOA
+- `also_notify` (List of String) The list of IP addresses (Format <IP>:<Port>) that will receive zone change notifications in addition to the NS listed in the SOA.
 - `class` (String) The class associated to the zone.
 - `class_parameters` (Map of String) The class parameters associated to the zone.
 - `createptr` (Boolean) Automaticaly create PTR records for the zone.

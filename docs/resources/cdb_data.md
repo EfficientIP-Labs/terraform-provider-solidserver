@@ -30,15 +30,15 @@ resource "solidserver_cdb_data" "myFirstCustomData" {
 
 ### Optional
 
-- `value10` (String) The value 10
-- `value2` (String) The value 2
-- `value3` (String) The value 3
-- `value4` (String) The value 4
-- `value5` (String) The value 5
-- `value6` (String) The value 6
-- `value7` (String) The value 7
-- `value8` (String) The value 8
-- `value9` (String) The value 9
+- `value10` (String) The value 10.
+- `value2` (String) The value 2.
+- `value3` (String) The value 3.
+- `value4` (String) The value 4.
+- `value5` (String) The value 5.
+- `value6` (String) The value 6.
+- `value7` (String) The value 7.
+- `value8` (String) The value 8.
+- `value9` (String) The value 9.
 
 ### Read-Only
 

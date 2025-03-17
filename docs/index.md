@@ -41,15 +41,15 @@ provider "solidserver" {
 
 ### Required
 
-- `host` (String) SOLIDServer Hostname or IP address. This can also be specified via the SOLIDSERVER_HOST environment variable
-- `password` (String) SOLIDServer API user password or token secret. This can also be specified via the SOLIDSERVER_PASSWORD environment variable
-- `username` (String) SOLIDServer API User ID or Token ID. This can also be specified via the SOLIDSERVER_USERNAME environment variable
+- `host` (String) SOLIDServer Hostname or IP address. This can also be specified via the SOLIDSERVER_HOST environment variable.
+- `password` (String) SOLIDServer API user password or token secret. This can also be specified via the SOLIDSERVER_PASSWORD environment variable.
+- `username` (String) SOLIDServer API User ID or Token ID. This can also be specified via the SOLIDSERVER_USERNAME environment variable.
 
 ### Optional
 
-- `additional_trust_certs_file` (String) PEM formatted file with additional certificates to trust for TLS connection. This can also be specified via the SOLIDSERVER_ADDITIONALTRUSTCERTSFILE environment variable
-- `proxy_url` (String) URL for a proxy to be used for SOLIDServer connectivity. Empty or unspecified means no proxy (direct connectivity). Supported URL schemes are 'http', 'https', and 'socks5'. If the scheme is empty, 'http' is assumed. This can also be specified via the SOLIDSERVER_PROXY_URL environment variable
-- `solidserverversion` (String) SOLIDServer Version in case API user does not have admin permissions. This can also be specified via the SOLIDSERVER_VERSION environment variable
-- `sslverify` (Boolean) Enable/Disable ssl verify (Default : enabled). This can also be specified via the SOLIDSERVER_SSLVERIFY environment variable
+- `additional_trust_certs_file` (String) PEM formatted file with additional certificates to trust for TLS connection. This can also be specified via the SOLIDSERVER_ADDITIONALTRUSTCERTSFILE environment variable.
+- `proxy_url` (String) URL for a proxy to be used for SOLIDServer connectivity. Empty or unspecified means no proxy (direct connectivity). Supported URL schemes are 'http', 'https', and 'socks5'. If the scheme is empty, 'http' is assumed. This can also be specified via the SOLIDSERVER_PROXY_URL environment variable.
+- `solidserverversion` (String) SOLIDServer Version in case API user does not have admin permissions. This can also be specified via the SOLIDSERVER_VERSION environment variable.
+- `sslverify` (Boolean) Enable/Disable ssl verify (Default : enabled). This can also be specified via the SOLIDSERVER_SSLVERIFY environment variable.
 - `timeout` (Number) API call timeout value in seconds (Default 10s)
-- `use_token` (Boolean) SOLIDServer username/password are token/secret. This can also be specified via the SOLIDSERVER_USE_TOKEN environment variable
+- `use_token` (Boolean) SOLIDServer username/password are token/secret. This can also be specified via the SOLIDSERVER_USE_TOKEN environment variable.

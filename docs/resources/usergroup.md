@@ -24,11 +24,11 @@ resource "solidserver_usergroup" "t_group_01" {
 
 ### Required
 
-- `name` (String) The name of the group
+- `name` (String) The name of the group.
 
 ### Optional
 
-- `description` (String) The description of the group
+- `description` (String) The description of the group.
 
 ### Read-Only
 

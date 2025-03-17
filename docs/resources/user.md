@@ -29,17 +29,17 @@ resource "solidserver_user" "myFirstUser" {
 
 ### Required
 
-- `groups` (Set of String) The group id set for this user
-- `login` (String) The login of the user
-- `password` (String) The password of the user
+- `groups` (Set of String) The group id set for this user.
+- `login` (String) The login of the user.
+- `password` (String) The password of the user.
 
 ### Optional
 
 - `class_parameters` (Map of String) The class parameters associated to the user.
-- `description` (String) The description of the user
-- `email` (String) The email address of the user
-- `first_name` (String) The first name of the user
-- `last_name` (String) The last name of the user
+- `description` (String) The description of the user.
+- `email` (String) The email address of the user.
+- `first_name` (String) The first name of the user.
+- `last_name` (String) The last name of the user.
 
 ### Read-Only
 

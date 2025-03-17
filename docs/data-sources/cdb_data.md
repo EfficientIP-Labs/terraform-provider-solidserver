@@ -25,18 +25,18 @@ data "solidserver_cdb_data" "myCustomData" {
 ### Required
 
 - `custom_db` (String) The name of the custom DB.
-- `value1` (String) The name of the value 1
+- `value1` (String) The name of the value 1.
 
 ### Read-Only
 
 - `id` (String) The ID of this resource.
-- `value10` (String) The name of the value 10
-- `value2` (String) The name of the value 2
-- `value3` (String) The name of the value 3
-- `value4` (String) The name of the value 4
-- `value5` (String) The name of the value 5
-- `value6` (String) The name of the value 6
-- `value7` (String) The name of the value 7
-- `value8` (String) The name of the value 8
-- `value9` (String) The name of the value 9
+- `value10` (String) The name of the value 10.
+- `value2` (String) The name of the value 2.
+- `value3` (String) The name of the value 3.
+- `value4` (String) The name of the value 4.
+- `value5` (String) The name of the value 5.
+- `value6` (String) The name of the value 6.
+- `value7` (String) The name of the value 7.
+- `value8` (String) The name of the value 8.
+- `value9` (String) The name of the value 9.
 

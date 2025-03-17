@@ -28,14 +28,14 @@ data "solidserver_cdb" "myFirstCustomDB" {
 ### Read-Only
 
 - `id` (String) The ID of this resource.
-- `label1` (String) The name of the label 1
-- `label10` (String) The name of the label 10
-- `label2` (String) The name of the label 2
-- `label3` (String) The name of the label 3
-- `label4` (String) The name of the label 4
-- `label5` (String) The name of the label 5
-- `label6` (String) The name of the label 6
-- `label7` (String) The name of the label 7
-- `label8` (String) The name of the label 8
-- `label9` (String) The name of the label 9
+- `label1` (String) The name of the label 1.
+- `label10` (String) The name of the label 10.
+- `label2` (String) The name of the label 2.
+- `label3` (String) The name of the label 3.
+- `label4` (String) The name of the label 4.
+- `label5` (String) The name of the label 5.
+- `label6` (String) The name of the label 6.
+- `label7` (String) The name of the label 7.
+- `label8` (String) The name of the label 8.
+- `label9` (String) The name of the label 9.
 

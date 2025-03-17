@@ -32,7 +32,7 @@ data "solidserver_dns_smart" "DnsSMARTData" {
 - `allow_transfer` (List of String) A list of network prefixes allowed to query the DNS server for zone transfert (named ACL(s) are not supported using this provider).
 - `arch` (String) The SMART architecture type (masterslave|stealth|multimaster|single|farm).
 - `class` (String) The class associated to the DNS server.
-- `class_parameters` (Map of String) The class parameters associated to the DNS SMART
+- `class_parameters` (Map of String) The class parameters associated to the DNS SMART.
 - `comment` (String) Custom information about the DNS SMART.
 - `forward` (String) The forwarding mode of the DNS SMART (Disabled if empty).
 - `forwarders` (List of String) The IP address list of the forwarder(s) configured on the DNS SMART.
