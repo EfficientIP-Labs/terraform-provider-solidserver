@@ -96,6 +96,7 @@ func Provider() *schema.Provider {
 			"solidserver_dns_server":       dataSourcednsserver(),
 			"solidserver_dns_view":         dataSourcednsview(),
 			"solidserver_dns_zone":         dataSourcednszone(),
+			//"solidserver_dns_rr":           dataSourcednsrr(),
 			"solidserver_vlan_domain":      dataSourcevlandomain(),
 			"solidserver_vlan_range":       dataSourcevlanrange(),
 			"solidserver_vlan":             dataSourcevlan(),
