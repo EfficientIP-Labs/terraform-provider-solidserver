@@ -388,42 +388,115 @@ func hostdevidbyname(hostdevName string, meta interface{}) (string, error) {
 
 // Return an available IP addresses from site_id, block_id and expected subnet_size
 // Or an empty table of string in case of failure
-func ipaddressfindfree(subnetID string, poolID string, meta interface{}) ([]string, error) {
+func ipaddressfindfree(subnetID string, poolID string, method string, meta interface{}) ([]string, error) {
 	s := meta.(*SOLIDserver)
 
-	// Building parameters
-	parameters := url.Values{}
-	parameters.Add("subnet_id", subnetID)
-	parameters.Add("max_find", "32")
+	if method == "start" || method == "end" {
+		// Building parameters
+		parameters := url.Values{}
 
-	if len(poolID) > 0 {
-		parameters.Add("pool_id", poolID)
-	}
+		whereClause := "free_start_ip_addr != free_end_ip_addr AND subnet_id=" + subnetID
 
-	// Sending the creation request
-	resp, body, err := s.Request("get", "rpc/ip_find_free_address", &parameters)
-
-	if err == nil {
-		var buf [](map[string]interface{})
-		json.Unmarshal([]byte(body), &buf)
-
-		// Checking the answer
-		if resp.StatusCode == 200 && len(buf) > 0 {
-			addresses := []string{}
-
-			for i := 0; i < len(buf); i++ {
-				if addr, addrExist := buf[i]["hostaddr"].(string); addrExist {
-					tflog.Debug(s.Ctx, fmt.Sprintf("Suggested IP address: %s\n", addr))
-					addresses = append(addresses, addr)
-				}
-			}
-			return addresses, nil
+		if len(poolID) > 0 {
+			whereClause += " AND pool_id = " + poolID
 		}
+
+		parameters.Add("WHERE", whereClause)
+
+		if method == "start" {
+			parameters.Add("ORDERBY", "free_start_ip_addr asc")
+		} else {
+			parameters.Add("ORDERBY", "free_end_ip_addr desc")
+		}
+
+		// Sending the request
+		resp, body, err := s.Request("get", "rest/ip_free_address_list", &parameters)
+
+		if err == nil {
+			var buf [](map[string]interface{})
+			json.Unmarshal([]byte(body), &buf)
+
+			// Checking the answer
+			if resp.StatusCode == 200 && len(buf) > 0 {
+				addresses := []string{}
+
+				for i := 0; i < len(buf); i++ {
+					startIPStr, okStart := buf[i]["free_start_ip_addr"].(string)
+					endIPStr, okEnd := buf[i]["free_end_ip_addr"].(string)
+
+					if !okStart || !okEnd {
+						continue
+					}
+
+					startIP, errStart := netip.ParseAddr(hexiptoip(startIPStr))
+					endIP, errEnd := netip.ParseAddr(hexiptoip(endIPStr))
+
+					if errStart != nil || errEnd != nil {
+						tflog.Debug(s.Ctx, fmt.Sprintf("Unable to compute free range start/end IP addresses: %s/%s\n", startIPStr, endIPStr))
+						continue
+					}
+
+					if method == "start" {
+						for currentIP := startIP; currentIP.Compare(endIP) <= 0; currentIP = currentIP.Next() {
+							if len(addresses) >= 32 { // Check the length before appending
+								return addresses, nil
+							}
+
+							tflog.Debug(s.Ctx, fmt.Sprintf("Suggested IP address: %s\n", currentIP.String()))
+							addresses = append(addresses, currentIP.String())
+						}
+					} else {
+						for currentIP := endIP; currentIP.Compare(startIP) >= 0; currentIP = currentIP.Prev() {
+							if len(addresses) >= 32 { // Check the length before appending
+								return addresses, nil
+							}
+
+							tflog.Debug(s.Ctx, fmt.Sprintf("Suggested IP address: %s\n", currentIP.String()))
+							addresses = append(addresses, currentIP.String())
+						}
+					}
+				}
+				return addresses, nil
+			}
+		}
+
+		tflog.Debug(s.Ctx, fmt.Sprintf("Unable to find a free IP address in subnet (oid): %s\n", subnetID))
+		return []string{}, err
+
+	} else {
+		// Building parameters
+		parameters := url.Values{}
+		parameters.Add("subnet_id", subnetID)
+		parameters.Add("max_find", "32")
+
+		if len(poolID) > 0 {
+			parameters.Add("pool_id", poolID)
+		}
+
+		// Sending the request
+		resp, body, err := s.Request("get", "rpc/ip_find_free_address", &parameters)
+
+		if err == nil {
+			var buf [](map[string]interface{})
+			json.Unmarshal([]byte(body), &buf)
+
+			// Checking the answer
+			if resp.StatusCode == 200 && len(buf) > 0 {
+				addresses := []string{}
+
+				for i := 0; i < len(buf); i++ {
+					if addr, addrExist := buf[i]["hostaddr"].(string); addrExist {
+						tflog.Debug(s.Ctx, fmt.Sprintf("Suggested IP address: %s\n", addr))
+						addresses = append(addresses, addr)
+					}
+				}
+				return addresses, nil
+			}
+		}
+
+		tflog.Debug(s.Ctx, fmt.Sprintf("Unable to find a free IP address in subnet (oid): %s\n", subnetID))
+		return []string{}, err
 	}
-
-	tflog.Debug(s.Ctx, fmt.Sprintf("Unable to find a free IP address in subnet (oid): %s\n", subnetID))
-
-	return []string{}, err
 }
 
 // Return an available IP addresses from site_id, block_id and expected subnet_size
