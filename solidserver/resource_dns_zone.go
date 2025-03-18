@@ -50,7 +50,7 @@ func resourcednszone() *schema.Resource {
 			},
 			"space": {
 				Type:        schema.TypeString,
-				Description: "The name of a space associated to the zone.",
+				Description: "The name of the IP space associated to the zone.",
 				Optional:    true,
 				ForceNew:    false,
 				Default:     "",

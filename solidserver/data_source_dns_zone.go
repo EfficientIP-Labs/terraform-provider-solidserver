@@ -39,7 +39,7 @@ func dataSourcednszone() *schema.Resource {
 			},
 			"space": {
 				Type:        schema.TypeString,
-				Description: "The name of a space associated to the DNS zone.",
+				Description: "The name of the IP space associated to the DNS zone.",
 				Computed:    true,
 			},
 			"type": {
