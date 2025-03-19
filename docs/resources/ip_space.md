@@ -2,14 +2,14 @@
 page_title: "solidserver_ip_space Resource - SOLIDserver"
 subcategory: ""
 description: |-
-  Space resource allows to create and manage the highest level objets in the SOLIDserver's IPAM module
+  Space resource allows to create and manage the highest level objects in the SOLIDserver's IPAM module
   organization, the entry point of any IPv4 or IPv6 addressing plan. Spaces allow to manage unique ranges
   of IP addresses.
 ---
 
 # solidserver_ip_space (Resource)
 
-Space resource allows to create and manage the highest level objets in the SOLIDserver's IPAM module
+Space resource allows to create and manage the highest level objects in the SOLIDserver's IPAM module
 organization, the entry point of any IPv4 or IPv6 addressing plan. Spaces allow to manage unique ranges
 of IP addresses.
 

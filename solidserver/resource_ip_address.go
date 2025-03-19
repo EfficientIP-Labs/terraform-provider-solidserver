@@ -57,9 +57,9 @@ func resourceipaddress() *schema.Resource {
 				ForceNew:     true,
 				Default:      "",
 			},
-			"assignment": {
+			"assignment_order": {
 				Type:         schema.TypeString,
-				Description:  "An optional IP assignment order within the subnet/pool (Supported: optimized, start, end; Default: optimized).",
+				Description:  "An optional IP assignment order within the parent subnet/pool (Supported: optimized, start, end; Default: optimized).",
 				ValidateFunc: validation.StringInSlice([]string{"optimized", "start", "end"}, false),
 				Optional:     true,
 				ForceNew:     true,
@@ -191,7 +191,7 @@ func resourceipaddressCreate(ctx context.Context, d *schema.ResourceData, meta i
 			poolID = poolInfo["id"].(string)
 		}
 
-		ipAddresses, ipErr = ipaddressfindfree(subnetInfo["id"].(string), poolID, d.Get("assignment").(string), meta)
+		ipAddresses, ipErr = ipaddressfindfree(subnetInfo["id"].(string), poolID, d.Get("assignment_order").(string), meta)
 
 		if ipErr != nil {
 			// Reporting a failure

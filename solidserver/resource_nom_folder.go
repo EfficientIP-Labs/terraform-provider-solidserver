@@ -23,26 +23,25 @@ func resourcenomfolder() *schema.Resource {
 		},
 
 		Description: heredoc.Doc(`
-			Space resource allows to create and manage the highest level objets in the SOLIDserver's IPAM module
-			organization, the entry point of any IPv4 or IPv6 addressing plan. Spaces allow to manage unique ranges
-			of IP addresses.
+			Folder resource allows to create and manage the folders in the SOLIDserver's Network Object Manager (NOM) module,
+			a lightweight network assets repository.
 		`),
 
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
-				Description: "The name of the NOM Folder.",
+				Description: "The name of the folder.",
 				Computed:    true,
 			},
 			"path": {
 				Type:        schema.TypeString,
-				Description: "The path of the NOM Folder to create.",
+				Description: "The path of the folder to create.",
 				Required:    true,
 				ForceNew:    true,
 			},
 			"description": {
 				Type:        schema.TypeString,
-				Description: "A short description of the NOM Folder to create.",
+				Description: "A short description of the folder to create.",
 				Optional:    true,
 				ForceNew:    false,
 				Default:     "",
@@ -56,14 +55,14 @@ func resourcenomfolder() *schema.Resource {
 			},
 			"class": {
 				Type:        schema.TypeString,
-				Description: "The class associated to the NOM Folder.",
+				Description: "The class associated to the folder.",
 				Optional:    true,
 				ForceNew:    false,
 				Default:     "",
 			},
 			"class_parameters": {
 				Type:        schema.TypeMap,
-				Description: "The class parameters associated to NOM Folder.",
+				Description: "The class parameters associated to the folder.",
 				Optional:    true,
 				ForceNew:    false,
 				Elem: &schema.Schema{
@@ -96,7 +95,7 @@ func resourcenomfolderCreate(ctx context.Context, d *schema.ResourceData, meta i
 		// Checking the answer
 		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
 			if oid, oidExist := buf[0]["ret_oid"].(string); oidExist {
-				tflog.Debug(ctx, fmt.Sprintf("Created NOM Folder (oid): %s\n", oid))
+				tflog.Debug(ctx, fmt.Sprintf("Created folder (oid): %s\n", oid))
 				d.SetId(oid)
 				d.Set("name", filepath.Base(d.Get("path").(string)))
 				return nil
@@ -106,11 +105,11 @@ func resourcenomfolderCreate(ctx context.Context, d *schema.ResourceData, meta i
 		// Reporting a failure
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				return diag.Errorf("Unable to create NOM Folder: %s (%s)", d.Get("path").(string), errMsg)
+				return diag.Errorf("Unable to create folder: %s (%s)", d.Get("path").(string), errMsg)
 			}
 		}
 
-		return diag.Errorf("Unable to create NOM Folder: %s\n", d.Get("path").(string))
+		return diag.Errorf("Unable to create folder: %s\n", d.Get("path").(string))
 	}
 
 	// Reporting a failure
@@ -139,7 +138,7 @@ func resourcenomfolderUpdate(ctx context.Context, d *schema.ResourceData, meta i
 		// Checking the answer
 		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
 			if oid, oidExist := buf[0]["ret_oid"].(string); oidExist {
-				tflog.Debug(ctx, fmt.Sprintf("Updated NOM Folder (oid): %s\n", oid))
+				tflog.Debug(ctx, fmt.Sprintf("Updated folder (oid): %s\n", oid))
 				d.SetId(oid)
 				return nil
 			}
@@ -148,11 +147,11 @@ func resourcenomfolderUpdate(ctx context.Context, d *schema.ResourceData, meta i
 		// Reporting a failure
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				return diag.Errorf("Unable to update NOM Folder: %s (%s)", d.Get("path").(string), errMsg)
+				return diag.Errorf("Unable to update folder: %s (%s)", d.Get("path").(string), errMsg)
 			}
 		}
 
-		return diag.Errorf("Unable to update NOM Folder: %s\n", d.Get("path").(string))
+		return diag.Errorf("Unable to update folder: %s\n", d.Get("path").(string))
 	}
 
 	// Reporting a failure
@@ -178,15 +177,15 @@ func resourcenomfolderDelete(ctx context.Context, d *schema.ResourceData, meta i
 			// Reporting a failure
 			if len(buf) > 0 {
 				if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-					return diag.Errorf("Unable to delete NOM Folder: %s (%s)", d.Get("path").(string), errMsg)
+					return diag.Errorf("Unable to delete folder: %s (%s)", d.Get("path").(string), errMsg)
 				}
 			}
 
-			return diag.Errorf("Unable to delete NOM Folder: %s", d.Get("path").(string))
+			return diag.Errorf("Unable to delete folder: %s", d.Get("path").(string))
 		}
 
 		// Log deletion
-		tflog.Debug(ctx, fmt.Sprintf("Deleted NOM Folder (oid): %s\n", d.Id()))
+		tflog.Debug(ctx, fmt.Sprintf("Deleted folder (oid): %s\n", d.Id()))
 
 		// Unset local ID
 		d.SetId("")
@@ -244,17 +243,17 @@ func resourcenomfolderRead(ctx context.Context, d *schema.ResourceData, meta int
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
 				// Log the error
-				tflog.Debug(ctx, fmt.Sprintf("Unable to find NOM Folder: %s (%s)\n", d.Get("path"), errMsg))
+				tflog.Debug(ctx, fmt.Sprintf("Unable to find folder: %s (%s)\n", d.Get("path"), errMsg))
 			}
 		} else {
 			// Log the error
-			tflog.Debug(ctx, fmt.Sprintf("Unable to find NOM Folder (oid): %s\n", d.Id()))
+			tflog.Debug(ctx, fmt.Sprintf("Unable to find folder (oid): %s\n", d.Id()))
 		}
 
 		// Do not unset the local ID to avoid inconsistency
 
 		// Reporting a failure
-		return diag.Errorf("Unable to find NOM Folder: %s\n", d.Get("path").(string))
+		return diag.Errorf("Unable to find folder: %s\n", d.Get("path").(string))
 	}
 
 	// Reporting a failure
@@ -305,14 +304,14 @@ func resourcenomfolderImportState(ctx context.Context, d *schema.ResourceData, m
 
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				tflog.Debug(ctx, fmt.Sprintf("Unable to import NOM Folder(oid): %s (%s)\n", d.Id(), errMsg))
+				tflog.Debug(ctx, fmt.Sprintf("Unable to import folder(oid): %s (%s)\n", d.Id(), errMsg))
 			}
 		} else {
-			tflog.Debug(ctx, fmt.Sprintf("Unable to find and import NOM Folder (oid): %s\n", d.Id()))
+			tflog.Debug(ctx, fmt.Sprintf("Unable to find and import folder (oid): %s\n", d.Id()))
 		}
 
 		// Reporting a failure
-		return nil, fmt.Errorf("Unable to find and import NOM Folder (oid): %s\n", d.Id())
+		return nil, fmt.Errorf("Unable to find and import folder (oid): %s\n", d.Id())
 	}
 
 	// Reporting a failure

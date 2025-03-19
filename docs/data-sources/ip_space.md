@@ -3,7 +3,7 @@ page_title: "solidserver_ip_space Data Source - SOLIDserver"
 subcategory: ""
 description: |-
   Space data-source allows to retrieve information about reserved IP spaces, including meta-data.
-  Spaces are the highest level objets in the SOLIDserver's IPAM module organization,
+  Spaces are the highest level objects in the SOLIDserver's IPAM module organization,
   the entry point of any IPv4 or IPv6 addressing plan. It allows to manage unique ranges
   of IP addresses.
 ---
@@ -11,7 +11,7 @@ description: |-
 # solidserver_ip_space (Data Source)
 
 Space data-source allows to retrieve information about reserved IP spaces, including meta-data.
-Spaces are the highest level objets in the SOLIDserver's IPAM module organization,
+Spaces are the highest level objects in the SOLIDserver's IPAM module organization,
 the entry point of any IPv4 or IPv6 addressing plan. It allows to manage unique ranges
 of IP addresses.
 
