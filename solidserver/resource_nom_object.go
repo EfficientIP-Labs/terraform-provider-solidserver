@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"net/url"
+	"strconv"
 )
 
 func resourcenomobject() *schema.Resource {
@@ -79,16 +80,111 @@ func resourcenomobject() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
-			"interfaces": {
-				Type: schema.TypeList,
-				Elem: &schema.Schema{
-					Type: schema.TypeMap,
-				},
-				Description: "Interfaces of the network object.",
+			"interface": {
+				Type:        schema.TypeSet,
+				Description: "A network interface of the network object.",
 				Optional:    true,
+				ForceNew:    false,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"name": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"mac": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"address": {
+							Type:         schema.TypeString,
+							ValidateFunc: validation.IsIPAddress,
+							Optional:     true,
+						},
+						"vlan_domain": {
+							Type:     schema.TypeString,
+							Optional: true,
+							Default:  "",
+						},
+						"vlan": {
+							Type:     schema.TypeInt,
+							Optional: true,
+							Default:  0,
+						},
+					},
+				},
 			},
 		},
 	}
+}
+
+func expandInterfaces(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]string, error) {
+	s := meta.(*SOLIDserver)
+
+	configs := d.Get("interface")
+	ifaces := configs.(*schema.Set).List()
+	results := []string{}
+	for _, rawiface := range ifaces {
+		// region, ok := limit["region"].(string)
+		// if !ok {
+		// 	return nil, fmt.Errorf("expected region to be string, got %T instead", limit["region"])
+		// }
+
+		iface, ok := rawiface.(map[string]interface{})
+
+		if !ok {
+			return nil, fmt.Errorf("Expected interface to be a map[string]interface{}, got %T instead", rawiface)
+		}
+
+		parameters := url.Values{}
+		parameters.Add("add_flag", "new_only")
+		parameters.Add("nomiface_port_name", iface["name"].(string))
+		parameters.Add("nomiface_port_mac", iface["mac"].(string))
+		parameters.Add("nomfolder_path", d.Get("folder_path").(string))
+		parameters.Add("nomnetobj_name", d.Get("name").(string))
+
+		//FIXME How to manage aliases ?
+		parameters.Add("nomiface_hostaddr", iface["address"].(string))
+
+		// Build ifname based on VlanID if provided
+		// Generate an error if no Vlan Domain is provided
+		if iface["vlan"] != 0 {
+			if iface["vlan_domain"] == "" {
+				tflog.Error(ctx, fmt.Sprintf("Unable create network interface, missing vlan_domain for interface: %s/%s/%s\n", d.Get("folder_path").(string), d.Get("name").(string), iface["name"].(string) + "." + strconv.Itoa(iface["vlan"].(int))))
+				continue
+			}
+
+			parameters.Add("nomiface_name", iface["address"].(string)+"."+strconv.Itoa(iface["vlan"].(int)))
+			parameters.Add("nomiface_vlan_domain", iface["vlan_domain"].(string))
+			parameters.Add("nomiface_vlan_number", strconv.Itoa(iface["vlan"].(int)))
+		} else {
+			parameters.Add("nomiface_name", iface["address"].(string))
+		}
+
+		// Sending creation request
+		resp, body, err := s.Request("post", "rest/nom_iface_add", &parameters)
+
+		if err != nil {
+			tflog.Error(ctx, fmt.Sprintf("Unable create network object: %s\n", err.Error()))
+			continue
+		}
+
+		var buf [](map[string]interface{})
+		json.Unmarshal([]byte(body), &buf)
+
+		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
+			tflog.Debug(ctx, fmt.Sprintf("Created network object interface: %s\n", iface["name"].(string)))
+		} else {
+			// Reporting a failure
+			if len(buf) > 0 {
+				if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
+					tflog.Error(ctx, fmt.Sprintf("Unable create network object: %s (%s)\n", iface["name"].(string), errMsg))
+				}
+			}
+		}
+
+		results = append(results, iface["name"].(string))
+	}
+	return results, nil
 }
 
 func resourcenomobjectCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -117,6 +213,9 @@ func resourcenomobjectCreate(ctx context.Context, d *schema.ResourceData, meta i
 			if oid, oidExist := buf[0]["ret_oid"].(string); oidExist {
 				tflog.Debug(ctx, fmt.Sprintf("Created network object (oid): %s\n", oid))
 				d.SetId(oid)
+
+				expandInterfaces(ctx, d, meta)
+
 				return nil
 			}
 		}
