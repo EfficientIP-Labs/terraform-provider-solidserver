@@ -10,7 +10,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"net/url"
+	"regexp"
 	"strconv"
+	"strings"
 )
 
 func resourcenomobject() *schema.Resource {
@@ -85,86 +87,157 @@ func resourcenomobject() *schema.Resource {
 				Description: "A network interface of the network object.",
 				Optional:    true,
 				ForceNew:    false,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"name": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"mac": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"address": {
-							Type:         schema.TypeString,
-							ValidateFunc: validation.IsIPAddress,
-							Optional:     true,
-						},
-						"vlan_domain": {
-							Type:     schema.TypeString,
-							Optional: true,
-							Default:  "",
-						},
-						"vlan": {
-							Type:     schema.TypeInt,
-							Optional: true,
-							Default:  0,
-						},
-					},
-				},
+				Elem:        interfaceSpecification(),
 			},
 		},
 	}
 }
 
-func expandInterfaces(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]string, error) {
+func interfaceSpecification() *schema.Resource {
+	return &schema.Resource{
+		Schema: map[string]*schema.Schema{
+			"name": {
+				Type:     schema.TypeString,
+				Required: true,
+			},
+			"mac": {
+				Type:         schema.TypeString,
+				ValidateFunc: validation.StringMatch(regexp.MustCompile("^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$"), "Unsupported MAC address format."),
+				Required:     true,
+			},
+			"address": {
+				Type:         schema.TypeString,
+				ValidateFunc: IsIPAddressOrEmptyString,
+				Optional:     true,
+				Default:      "",
+			},
+			"vlan_domain": {
+				Type:     schema.TypeString,
+				Optional: true,
+				Default:  "",
+			},
+			"vlan": {
+				Type:     schema.TypeInt,
+				Optional: true,
+				Default:  0,
+			},
+		},
+	}
+}
+
+func validateInterfaces(ctx context.Context, d *schema.ResourceData, meta interface{}) error {
+	configs := d.Get("interface")
+	ifaces := configs.(*schema.Set).List()
+
+	invalidIfaces := []string{}
+
+	for _, rawiface := range ifaces {
+		iface, ok := rawiface.(map[string]interface{})
+
+		if !ok {
+			return fmt.Errorf("Expected network object interface(s) to be a map[string]interface{}, got %T instead", rawiface)
+		}
+
+		if (iface["vlan"] != 0 && iface["vlan_domain"] == "") || (iface["vlan_domain"] != "" && iface["vlan"] == 0) {
+			invalidIfaces = append(invalidIfaces, iface["name"].(string))
+		}
+	}
+
+	if len(invalidIfaces) > 0 {
+		return fmt.Errorf("Invalide vlan configuration for: %s", strings.Join(invalidIfaces, ", "))
+	}
+
+	return nil
+}
+
+func readInterfaces(ctx context.Context, d *schema.ResourceData, meta interface{}) *schema.Set {
+	s := meta.(*SOLIDserver)
+	var results []interface{}
+
+	parameters := url.Values{}
+	whereClause := "nomfolder_path='" + d.Get("folder_path").(string) + "' and nomnetobj_name='" + d.Get("name").(string) + "'"
+	parameters.Add("WHERE", whereClause)
+
+	// Sending read request
+	resp, body, err := s.Request("get", "rest/nom_iface_list", &parameters)
+
+	if err == nil {
+		var buf [](map[string]interface{})
+		json.Unmarshal([]byte(body), &buf)
+
+		// Checking the answer
+		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
+			for _, rawIface := range buf {
+				tflog.Debug(ctx, fmt.Sprintf("Reading network object interface(s) information: %s\n", rawIface["nomiface_port_name"].(string)))
+
+				rawIfacevlan, _ := strconv.Atoi(rawIface["nomiface_vlan_number"].(string))
+
+				res := map[string]interface{}{
+					"name":        rawIface["nomiface_port_name"].(string),
+					"mac":         rawIface["nomiface_main_mac"].(string),
+					"address":     rawIface["nomiface_hostaddr"].(string),
+					"vlan_domain": "",
+					"vlan":        rawIfacevlan,
+				}
+
+				if rawIface["nomiface_vlan_domain"].(string) != "#" {
+					res["vlan_domain"] = rawIface["nomiface_vlan_domain"].(string)
+				}
+
+				results = append(results, res)
+			}
+		}
+	}
+
+	return schema.NewSet(schema.HashResource(interfaceSpecification()), results)
+}
+
+func pushInterfaces(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]string, error) {
 	s := meta.(*SOLIDserver)
 
 	configs := d.Get("interface")
 	ifaces := configs.(*schema.Set).List()
 	results := []string{}
 	for _, rawiface := range ifaces {
-		// region, ok := limit["region"].(string)
-		// if !ok {
-		// 	return nil, fmt.Errorf("expected region to be string, got %T instead", limit["region"])
-		// }
-
 		iface, ok := rawiface.(map[string]interface{})
 
 		if !ok {
-			return nil, fmt.Errorf("Expected interface to be a map[string]interface{}, got %T instead", rawiface)
+			return nil, fmt.Errorf("Expected interface(s) to be a map[string]interface{}, got %T instead", rawiface)
 		}
 
 		parameters := url.Values{}
-		parameters.Add("add_flag", "new_only")
+		parameters.Add("add_flag", "new_edit")
 		parameters.Add("nomiface_port_name", iface["name"].(string))
 		parameters.Add("nomiface_port_mac", iface["mac"].(string))
 		parameters.Add("nomfolder_path", d.Get("folder_path").(string))
 		parameters.Add("nomnetobj_name", d.Get("name").(string))
-
-		//FIXME How to manage aliases ?
 		parameters.Add("nomiface_hostaddr", iface["address"].(string))
 
 		// Build ifname based on VlanID if provided
-		// Generate an error if no Vlan Domain is provided
+		// Log an error if no Vlan Domain is provided
 		if iface["vlan"] != 0 {
 			if iface["vlan_domain"] == "" {
-				tflog.Error(ctx, fmt.Sprintf("Unable create network interface, missing vlan_domain for interface: %s/%s/%s\n", d.Get("folder_path").(string), d.Get("name").(string), iface["name"].(string) + "." + strconv.Itoa(iface["vlan"].(int))))
+				tflog.Error(ctx, fmt.Sprintf("Unable create network interface(s), missing vlan_domain for interface: %s/%s/%s\n", d.Get("folder_path").(string), d.Get("name").(string), iface["name"].(string)+"."+strconv.Itoa(iface["vlan"].(int))))
 				continue
 			}
 
-			parameters.Add("nomiface_name", iface["address"].(string)+"."+strconv.Itoa(iface["vlan"].(int)))
+			parameters.Add("nomiface_name", iface["name"].(string)+"."+strconv.Itoa(iface["vlan"].(int)))
 			parameters.Add("nomiface_vlan_domain", iface["vlan_domain"].(string))
 			parameters.Add("nomiface_vlan_number", strconv.Itoa(iface["vlan"].(int)))
 		} else {
-			parameters.Add("nomiface_name", iface["address"].(string))
+			if iface["vlan_domain"] != "" {
+				tflog.Error(ctx, fmt.Sprintf("Unable create network interface(s), missing vlan for interface: %s/%s/%s\n", d.Get("folder_path").(string), d.Get("name").(string), iface["name"].(string)+"."+strconv.Itoa(iface["vlan"].(int))))
+				continue
+			}
+
+			parameters.Add("nomiface_name", iface["name"].(string))
 		}
 
 		// Sending creation request
 		resp, body, err := s.Request("post", "rest/nom_iface_add", &parameters)
 
 		if err != nil {
-			tflog.Error(ctx, fmt.Sprintf("Unable create network object: %s\n", err.Error()))
+			tflog.Error(ctx, fmt.Sprintf("Unable create network object interface: %s\n", err.Error()))
 			continue
 		}
 
@@ -187,8 +260,43 @@ func expandInterfaces(ctx context.Context, d *schema.ResourceData, meta interfac
 	return results, nil
 }
 
+func deleteInterfaces(ctx context.Context, d *schema.ResourceData, meta interface{}) error {
+	s := meta.(*SOLIDserver)
+
+	configs := d.Get("interface")
+	ifaces := configs.(*schema.Set).List()
+
+	for _, rawiface := range ifaces {
+		iface, ok := rawiface.(map[string]interface{})
+
+		if !ok {
+			return fmt.Errorf("Expected interface(s) to be a map[string]interface{}, got %T instead", rawiface)
+		}
+
+		parameters := url.Values{}
+		parameters.Add("nomiface_port_name", iface["name"].(string))
+		parameters.Add("nomfolder_path", d.Get("folder_path").(string))
+		parameters.Add("nomnetobj_name", d.Get("name").(string))
+
+		// Sending creation request
+		_, _, err := s.Request("delete", "rest/nom_iface_delete", &parameters)
+
+		if err != nil {
+			tflog.Error(ctx, fmt.Sprintf("Unable delete network object interface(s): %s\n", err.Error()))
+			continue
+		}
+	}
+	return nil
+}
+
 func resourcenomobjectCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
+
+	// Validate interfaces
+	ifaceError := validateInterfaces(ctx, d, meta)
+	if ifaceError != nil {
+		return diag.Errorf("Unable to create network object: %s/%s (%s)", d.Get("folder_path").(string), d.Get("name").(string), ifaceError)
+	}
 
 	// Building parameters
 	parameters := url.Values{}
@@ -214,7 +322,7 @@ func resourcenomobjectCreate(ctx context.Context, d *schema.ResourceData, meta i
 				tflog.Debug(ctx, fmt.Sprintf("Created network object (oid): %s\n", oid))
 				d.SetId(oid)
 
-				expandInterfaces(ctx, d, meta)
+				pushInterfaces(ctx, d, meta)
 
 				return nil
 			}
@@ -236,6 +344,12 @@ func resourcenomobjectCreate(ctx context.Context, d *schema.ResourceData, meta i
 
 func resourcenomobjectUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
+
+	// Validate interfaces
+	ifaceError := validateInterfaces(ctx, d, meta)
+	if ifaceError != nil {
+		return diag.Errorf("Unable to update network object: %s/%s (%s)", d.Get("folder_path").(string), d.Get("name").(string), ifaceError)
+	}
 
 	// Building parameters
 	parameters := url.Values{}
@@ -259,6 +373,9 @@ func resourcenomobjectUpdate(ctx context.Context, d *schema.ResourceData, meta i
 			if oid, oidExist := buf[0]["ret_oid"].(string); oidExist {
 				tflog.Debug(ctx, fmt.Sprintf("Updated network object (oid): %s\n", oid))
 				d.SetId(oid)
+
+				pushInterfaces(ctx, d, meta)
+
 				return nil
 			}
 		}
@@ -283,6 +400,9 @@ func resourcenomobjectDelete(ctx context.Context, d *schema.ResourceData, meta i
 	// Building parameters
 	parameters := url.Values{}
 	parameters.Add("nomnetobj_id", d.Id())
+
+	// Delete network object interfaces
+	deleteInterfaces(ctx, d, meta)
 
 	// Sending the deletion request
 	resp, body, err := s.Request("delete", "rest/nom_netobj_delete", &parameters)
@@ -353,6 +473,9 @@ func resourcenomobjectRead(ctx context.Context, d *schema.ResourceData, meta int
 
 			d.Set("class_parameters", computedClassParameters)
 
+			//FIXME handle errors err = d.Set("interface", readInterfaces(ctx, d, meta))
+			d.Set("interface", readInterfaces(ctx, d, meta))
+
 			return nil
 		}
 
@@ -411,6 +534,9 @@ func resourcenomobjectImportState(ctx context.Context, d *schema.ResourceData, m
 			}
 
 			d.Set("class_parameters", computedClassParameters)
+
+			//FIXME handle errors err = d.Set("interface", readInterfaces(ctx, d, meta))
+			d.Set("interface", readInterfaces(ctx, d, meta))
 
 			return []*schema.ResourceData{d}, nil
 		}

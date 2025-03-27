@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	//"go4.org/netipx"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"math/big"
 	"net/netip"
 	"net/url"
@@ -21,6 +21,20 @@ func abs(x int) int {
 	}
 
 	return x
+}
+
+func IsIPAddressOrEmptyString(i interface{}, k string) (warnings []string, errors []error) {
+	v, ok := i.(string)
+	if !ok {
+		errors = append(errors, fmt.Errorf("expected type of %q to be string", k))
+		return warnings, errors
+	}
+
+	if v != "" {
+		return validation.IsIPAddress(i, k)
+	}
+
+	return warnings, errors
 }
 
 // Return the offset of a matching string in a slice or -1 if not found
