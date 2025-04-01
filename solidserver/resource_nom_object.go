@@ -84,10 +84,12 @@ func resourcenomobject() *schema.Resource {
 			},
 			"interface": {
 				Type:        schema.TypeSet,
-				Description: "A network interface of the network object.",
+				//Type:        schema.TypeMap,
+				Description: "A set of network interface(s) attached to the network object.",
 				Optional:    true,
 				ForceNew:    false,
-				Elem:        interfaceSpecification(),
+				Elem:      interfaceSpecification(),
+				//Elem: 		 interfaceSpecification(),
 			},
 		},
 	}
@@ -105,11 +107,18 @@ func interfaceSpecification() *schema.Resource {
 				ValidateFunc: validation.StringMatch(regexp.MustCompile("^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$"), "Unsupported MAC address format."),
 				Required:     true,
 			},
-			"address": {
-				Type:         schema.TypeString,
-				ValidateFunc: IsIPAddressOrEmptyString,
-				Optional:     true,
-				Default:      "",
+			"addresses": {
+				//Type:         schema.TypeString,
+				//ValidateFunc: IsIPAddressOrEmptyString,
+				//Optional:     true,
+				//Default:      "",
+				Type:        schema.TypeList,
+				Description: "The list of IP addresses associated with the interface.",
+				Optional:    true,
+				Elem: &schema.Schema{
+					Type:         schema.TypeString,
+					ValidateFunc: IsIPAddressOrEmptyString,
+				},
 			},
 			"vlan_domain": {
 				Type:     schema.TypeString,
@@ -152,7 +161,8 @@ func validateInterfaces(ctx context.Context, d *schema.ResourceData, meta interf
 
 func readInterfaces(ctx context.Context, d *schema.ResourceData, meta interface{}) *schema.Set {
 	s := meta.(*SOLIDserver)
-	var results []interface{}
+	results := make([]interface{}, 0)
+	resMap := make(map[string]map[string]interface{})
 
 	parameters := url.Values{}
 	whereClause := "nomfolder_path='" + d.Get("folder_path").(string) + "' and nomnetobj_name='" + d.Get("name").(string) + "'"
@@ -170,20 +180,35 @@ func readInterfaces(ctx context.Context, d *schema.ResourceData, meta interface{
 			for _, rawIface := range buf {
 				tflog.Debug(ctx, fmt.Sprintf("Reading network object interface(s) information: %s\n", rawIface["nomiface_port_name"].(string)))
 
-				rawIfacevlan, _ := strconv.Atoi(rawIface["nomiface_vlan_number"].(string))
+				rawIfaceUID := rawIface["nomiface_port_name"].(string) + "." + rawIface["nomiface_vlan_number"].(string)
+				rawIfaceVlan, _ := strconv.Atoi(rawIface["nomiface_vlan_number"].(string))
+				_, ifaceExists := resMap[rawIfaceUID]
 
-				res := map[string]interface{}{
-					"name":        rawIface["nomiface_port_name"].(string),
-					"mac":         rawIface["nomiface_main_mac"].(string),
-					"address":     rawIface["nomiface_hostaddr"].(string),
-					"vlan_domain": "",
-					"vlan":        rawIfacevlan,
+				if !ifaceExists {
+					resMap[rawIfaceUID] = map[string]interface{}{
+						"name":        rawIface["nomiface_port_name"].(string),
+						"mac":         rawIface["nomiface_main_mac"].(string),
+						"vlan_domain": "",
+						"vlan":        rawIfaceVlan,
+						"addresses":   make([]interface{}, 0),
+					}
+
+					if rawIface["nomiface_vlan_domain"].(string) != "#" {
+						resMap[rawIfaceUID]["vlan_domain"] = rawIface["nomiface_vlan_domain"].(string)
+					}
 				}
 
-				if rawIface["nomiface_vlan_domain"].(string) != "#" {
-					res["vlan_domain"] = rawIface["nomiface_vlan_domain"].(string)
+				if rawIface["nomiface_hostaddr"].(string) != "" {
+					resMap[rawIfaceUID]["addresses"] = append(resMap[rawIfaceUID]["addresses"].([]interface{}), rawIface["nomiface_hostaddr"])
+				} else {
+					if rawIface["nomiface_hostaddr6"].(string) != "" {
+						resMap[rawIfaceUID]["addresses"] = append(resMap[rawIfaceUID]["addresses"].([]interface{}), rawIface["nomiface_hostaddr6"])
+					}
 				}
+			}
 
+			// Build interface list from resMap
+			for _, res := range resMap {
 				results = append(results, res)
 			}
 		}
@@ -195,8 +220,15 @@ func readInterfaces(ctx context.Context, d *schema.ResourceData, meta interface{
 func pushInterfaces(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]string, error) {
 	s := meta.(*SOLIDserver)
 
-	configs := d.Get("interface")
-	ifaces := configs.(*schema.Set).List()
+	configsOld, configsNew := d.GetChange("interface")
+
+	oldMap := make(map[string]map[string]interface{})
+	newMap := make(map[string]map[string]interface{})
+
+
+
+	//configs := d.Get("interface")
+	ifaces := configsNew.(*schema.Set).List()
 	results := []string{}
 	for _, rawiface := range ifaces {
 		iface, ok := rawiface.(map[string]interface{})
@@ -205,13 +237,12 @@ func pushInterfaces(ctx context.Context, d *schema.ResourceData, meta interface{
 			return nil, fmt.Errorf("Expected interface(s) to be a map[string]interface{}, got %T instead", rawiface)
 		}
 
-		parameters := url.Values{}
-		parameters.Add("add_flag", "new_edit")
-		parameters.Add("nomiface_port_name", iface["name"].(string))
-		parameters.Add("nomiface_port_mac", iface["mac"].(string))
-		parameters.Add("nomfolder_path", d.Get("folder_path").(string))
-		parameters.Add("nomnetobj_name", d.Get("name").(string))
-		parameters.Add("nomiface_hostaddr", iface["address"].(string))
+		gparameters := url.Values{}
+		gparameters.Add("add_flag", "new_edit")
+		gparameters.Add("nomiface_port_name", iface["name"].(string))
+		gparameters.Add("nomiface_port_mac", iface["mac"].(string))
+		gparameters.Add("nomfolder_path", d.Get("folder_path").(string))
+		gparameters.Add("nomnetobj_name", d.Get("name").(string))
 
 		// Build ifname based on VlanID if provided
 		// Log an error if no Vlan Domain is provided
@@ -221,41 +252,47 @@ func pushInterfaces(ctx context.Context, d *schema.ResourceData, meta interface{
 				continue
 			}
 
-			parameters.Add("nomiface_name", iface["name"].(string)+"."+strconv.Itoa(iface["vlan"].(int)))
-			parameters.Add("nomiface_vlan_domain", iface["vlan_domain"].(string))
-			parameters.Add("nomiface_vlan_number", strconv.Itoa(iface["vlan"].(int)))
+			gparameters.Add("nomiface_name", iface["name"].(string)+"."+strconv.Itoa(iface["vlan"].(int)))
+			gparameters.Add("nomiface_vlan_domain", iface["vlan_domain"].(string))
+			gparameters.Add("nomiface_vlan_number", strconv.Itoa(iface["vlan"].(int)))
 		} else {
 			if iface["vlan_domain"] != "" {
 				tflog.Error(ctx, fmt.Sprintf("Unable create network interface(s), missing vlan for interface: %s/%s/%s\n", d.Get("folder_path").(string), d.Get("name").(string), iface["name"].(string)+"."+strconv.Itoa(iface["vlan"].(int))))
 				continue
 			}
 
-			parameters.Add("nomiface_name", iface["name"].(string))
+			gparameters.Add("nomiface_name", iface["name"].(string))
 		}
 
-		// Sending creation request
-		resp, body, err := s.Request("post", "rest/nom_iface_add", &parameters)
+		for _, addr := range iface["addresses"].([]interface{}) {
+			parameters := gparameters
 
-		if err != nil {
-			tflog.Error(ctx, fmt.Sprintf("Unable create network object interface: %s\n", err.Error()))
-			continue
-		}
+			parameters.Add("nomiface_hostaddr", addr.(string))
 
-		var buf [](map[string]interface{})
-		json.Unmarshal([]byte(body), &buf)
+			// Sending creation request
+			resp, body, err := s.Request("post", "rest/nom_iface_add", &parameters)
 
-		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
-			tflog.Debug(ctx, fmt.Sprintf("Created network object interface: %s\n", iface["name"].(string)))
-		} else {
-			// Reporting a failure
-			if len(buf) > 0 {
-				if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-					tflog.Error(ctx, fmt.Sprintf("Unable create network object: %s (%s)\n", iface["name"].(string), errMsg))
+			if err != nil {
+				tflog.Error(ctx, fmt.Sprintf("Unable create network object interface: %s\n", err.Error()))
+				continue
+			}
+
+			var buf [](map[string]interface{})
+			json.Unmarshal([]byte(body), &buf)
+
+			if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
+				tflog.Debug(ctx, fmt.Sprintf("Created network object interface: %s\n", iface["name"].(string)))
+			} else {
+				// Reporting a failure
+				if len(buf) > 0 {
+					if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
+						tflog.Error(ctx, fmt.Sprintf("Unable create network object: %s (%s)\n", iface["name"].(string), errMsg))
+					}
 				}
 			}
-		}
 
-		results = append(results, iface["name"].(string))
+			results = append(results, iface["name"].(string))
+		}
 	}
 	return results, nil
 }
