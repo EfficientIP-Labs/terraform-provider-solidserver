@@ -8,8 +8,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"net/url"
-	"path/filepath"
+	"regexp"
 )
 
 func resourcenomfolder() *schema.Resource {
@@ -31,13 +32,15 @@ func resourcenomfolder() *schema.Resource {
 			"name": {
 				Type:        schema.TypeString,
 				Description: "The name of the folder.",
-				Computed:    true,
-			},
-			"path": {
-				Type:        schema.TypeString,
-				Description: "The path of the folder to create.",
 				Required:    true,
 				ForceNew:    true,
+			},
+			"path": {
+				Type:         schema.TypeString,
+				Description:  "The path of the folder to create.",
+				ValidateFunc: validation.StringDoesNotMatch(regexp.MustCompile("^\\/.*$|^.*\\/$"), "Path must not starts nor ends with a '/'."),
+				Required:     true,
+				ForceNew:     true,
 			},
 			"description": {
 				Type:        schema.TypeString,
@@ -79,7 +82,13 @@ func resourcenomfolderCreate(ctx context.Context, d *schema.ResourceData, meta i
 	// Building parameters
 	parameters := url.Values{}
 	parameters.Add("add_flag", "new_only")
-	parameters.Add("nomfolder_path", d.Get("path").(string))
+
+	if d.Get("path").(string) != "" {
+		parameters.Add("nomfolder_path", d.Get("path").(string)+"/"+d.Get("name").(string))
+	} else {
+		parameters.Add("nomfolder_path", d.Get("name").(string))
+	}
+
 	parameters.Add("nomfolder_description", d.Get("description").(string))
 	parameters.Add("nomfolder_site_name", d.Get("space").(string))
 	parameters.Add("nomfolder_class_name", d.Get("class").(string))
@@ -97,7 +106,6 @@ func resourcenomfolderCreate(ctx context.Context, d *schema.ResourceData, meta i
 			if oid, oidExist := buf[0]["ret_oid"].(string); oidExist {
 				tflog.Debug(ctx, fmt.Sprintf("Created folder (oid): %s\n", oid))
 				d.SetId(oid)
-				d.Set("name", filepath.Base(d.Get("path").(string)))
 				return nil
 			}
 		}
@@ -147,11 +155,11 @@ func resourcenomfolderUpdate(ctx context.Context, d *schema.ResourceData, meta i
 		// Reporting a failure
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-				return diag.Errorf("Unable to update folder: %s (%s)", d.Get("path").(string), errMsg)
+				return diag.Errorf("Unable to update folder: %s (%s)", d.Get("path").(string)+"/"+d.Get("name").(string), errMsg)
 			}
 		}
 
-		return diag.Errorf("Unable to update folder: %s\n", d.Get("path").(string))
+		return diag.Errorf("Unable to update folder: %s\n", d.Get("path").(string)+"/"+d.Get("name").(string))
 	}
 
 	// Reporting a failure
@@ -177,11 +185,11 @@ func resourcenomfolderDelete(ctx context.Context, d *schema.ResourceData, meta i
 			// Reporting a failure
 			if len(buf) > 0 {
 				if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
-					return diag.Errorf("Unable to delete folder: %s (%s)", d.Get("path").(string), errMsg)
+					return diag.Errorf("Unable to delete folder: %s (%s)", d.Get("path").(string)+"/"+d.Get("name").(string), errMsg)
 				}
 			}
 
-			return diag.Errorf("Unable to delete folder: %s", d.Get("path").(string))
+			return diag.Errorf("Unable to delete folder: %s", d.Get("path").(string)+"/"+d.Get("name").(string))
 		}
 
 		// Log deletion
@@ -243,7 +251,7 @@ func resourcenomfolderRead(ctx context.Context, d *schema.ResourceData, meta int
 		if len(buf) > 0 {
 			if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
 				// Log the error
-				tflog.Debug(ctx, fmt.Sprintf("Unable to find folder: %s (%s)\n", d.Get("path"), errMsg))
+				tflog.Debug(ctx, fmt.Sprintf("Unable to find folder: %s (%s)\n", d.Get("path").(string)+"/"+d.Get("name").(string), errMsg))
 			}
 		} else {
 			// Log the error

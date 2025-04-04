@@ -9,6 +9,7 @@ import (
 	"math/big"
 	"net/netip"
 	"net/url"
+	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -37,6 +38,21 @@ func IsIPAddressOrEmptyString(i interface{}, k string) (warnings []string, error
 	return warnings, errors
 }
 
+// Convert a Slice of interface{} into a Slice of string(s)
+func interfaceSliceToStringSlice(interfaceSlice []interface{}) ([]string, error) {
+	stringSlice := make([]string, len(interfaceSlice))
+
+	for i, val := range interfaceSlice {
+		strVal, ok := val.(string) // Type assertion
+		if !ok {
+			return nil, fmt.Errorf("element at index %d is not a string, but %v", i, reflect.TypeOf(val))
+		}
+		stringSlice[i] = strVal
+	}
+
+	return stringSlice, nil
+}
+
 // Return the offset of a matching string in a slice or -1 if not found
 func stringOffsetInSlice(s string, list []string) int {
 	for offset, entry := range list {
@@ -45,6 +61,16 @@ func stringOffsetInSlice(s string, list []string) int {
 		}
 	}
 	return -1
+}
+
+// Return an entry from a unordered slice based on an index
+func removeOffsetInSlice(i int, s []string) []string {
+	if i <= 0 {
+		return s
+	} else {
+		s[i] = s[len(s)-1]
+		return s[:len(s)-1]
+	}
 }
 
 // Convert a Schema.TypeList interface into an array of strings
@@ -369,6 +395,35 @@ func urlfromclassparams(parameters interface{}) url.Values {
 	}
 
 	return classParameters
+}
+
+// Return the port oid from an interface_id
+// Or an empty string in case of failure
+func portidbyinterfaceid(interfaceID string, meta interface{}) (string, error) {
+	s := meta.(*SOLIDserver)
+
+	// Building parameters
+	parameters := url.Values{}
+	parameters.Add("nomiface_id", interfaceID)
+
+	// Sending the read request
+	resp, body, err := s.Request("get", "rest/nom_iface_info", &parameters)
+
+	if err == nil {
+		var buf [](map[string]interface{})
+		json.Unmarshal([]byte(body), &buf)
+
+		// Checking the answer
+		if resp.StatusCode == 200 && len(buf) > 0 {
+			if portID, portIDExist := buf[0]["nomport_id"].(string); portIDExist {
+				return portID, nil
+			}
+		}
+	}
+
+	tflog.Debug(s.Ctx, fmt.Sprintf("Unable to find interface (OID): %s\n", interfaceID))
+
+	return "", err
 }
 
 // Return the oid of a device from hostdev_name
