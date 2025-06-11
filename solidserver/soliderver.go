@@ -235,7 +235,7 @@ func (s *SOLIDserver) GetVersion(version string) diag.Diagnostics {
 				}
 			}
 			tflog.Debug(s.Ctx, fmt.Sprintf("Error retrieving SOLIDserver Version (Insufficient Permissions)."))
-			tflog.Debug(s.Ctx, fmt.Sprintf("SOLIDserver version retrived from local provider parameter: %d\n", s.Version))
+			tflog.Debug(s.Ctx, fmt.Sprintf("SOLIDserver version retrieved from local provider parameter: %d\n", s.Version))
 
 			return nil
 		} else {

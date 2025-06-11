@@ -17,7 +17,7 @@ func dataSourceipsubnetquery() *schema.Resource {
 		ReadContext: dataSourceipsubnetqueryRead,
 
 		Description: heredoc.Doc(`
-			IP subnet query data-source allows to retrieve information about the first IPv4 subnet matching given criterias, including its meta-data.
+			IP subnet query data-source allows to retrieve information about the first IPv4 subnet matching given criteria, including its meta-data.
 		`),
 
 		Schema: map[string]*schema.Schema{

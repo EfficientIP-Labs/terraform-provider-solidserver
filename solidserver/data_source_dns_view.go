@@ -20,8 +20,8 @@ func dataSourcednsview() *schema.Resource {
 
 		Description: heredoc.Doc(`
 			DNS view data-source allows to retrieve information about DNS views.
-			View(s) are virutal containers mostly used to implement DNS split horizon
-			providing different answers depending on matching criterias.
+			View(s) are virtual containers mostly used to implement DNS split horizon
+			providing different answers depending on matching criteria.
 		`),
 
 		Schema: map[string]*schema.Schema{

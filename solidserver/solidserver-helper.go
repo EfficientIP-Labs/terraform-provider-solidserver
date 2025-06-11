@@ -103,7 +103,7 @@ func toStringArrayInterface(in []string) []interface{} {
 // Workaround to TF Plugin SDK issue https://github.com/hashicorp/terraform-plugin-sdk/issues/477
 func typeListConsistentMerge(old []string, new []string) []interface{} {
 	// Step 1 Build local list of member indexed by their offset
-	old_offsets := make(map[int]string, len(old))
+	oldOffsets := make(map[int]string, len(old))
 	diff := make([]string, 0, len(new))
 	res := make([]interface{}, 0, len(new))
 
@@ -112,7 +112,7 @@ func typeListConsistentMerge(old []string, new []string) []interface{} {
 			offset := stringOffsetInSlice(n, old)
 
 			if offset != -1 {
-				old_offsets[offset] = n
+				oldOffsets[offset] = n
 			} else {
 				diff = append(diff, n)
 			}
@@ -122,14 +122,14 @@ func typeListConsistentMerge(old []string, new []string) []interface{} {
 	// Merge sorted entries ordered by their offset with the diff array that contain the new ones
 	// Step 2 Sort the index
 	keys := make([]int, 0, len(old))
-	for k := range old_offsets {
+	for k := range oldOffsets {
 		keys = append(keys, k)
 	}
 	sort.Ints(keys)
 
 	// Step 3 build the result
 	for _, k := range keys {
-		res = append(res, old_offsets[k])
+		res = append(res, oldOffsets[k])
 	}
 	for _, v := range diff {
 		res = append(res, v)
@@ -340,7 +340,7 @@ func resourcediffsuppressIPv6Format(k, old, new string, d *schema.ResourceData) 
 }
 
 // Compute the prefix length from the size of a CIDR prefix
-// Return the prefix lenght
+// Return the prefix length
 func sizetoprefixlength(size int) int {
 	prefixlength := 32
 
@@ -1199,8 +1199,8 @@ func ipaliasidbyinfo(addressID string, aliasName string, ipNameType string, meta
 
 		// Checking the answer
 		if resp.StatusCode == 200 && len(buf) > 0 {
-			if ip_name_id, ip_name_id_exist := buf[0]["ip_name_id"].(string); ip_name_id_exist {
-				return ip_name_id, nil
+			if ipNameID, ipNameIDExist := buf[0]["ipNameID"].(string); ipNameIDExist {
+				return ipNameID, nil
 			}
 		}
 	}
@@ -1243,7 +1243,7 @@ func ipsubnetfindbysize(siteID string, blockID string, requestedIP string, prefi
 			subnetAddresses := []string{}
 
 			for i := 0; i < len(buf); i++ {
-				if hexaddr, hexaddr_exist := buf[i]["start_ip_addr"].(string); hexaddr_exist {
+				if hexaddr, hexaddrExist := buf[i]["start_ip_addr"].(string); hexaddrExist {
 					tflog.Debug(s.Ctx, fmt.Sprintf("Suggested IP subnet address: %s\n", hexiptoip(hexaddr)))
 					subnetAddresses = append(subnetAddresses, hexaddr)
 				}
@@ -1290,7 +1290,7 @@ func ip6subnetfindbysize(siteID string, blockID string, requestedIP string, pref
 			subnetAddresses := []string{}
 
 			for i := 0; i < len(buf); i++ {
-				if hexaddr, hexaddr_exist := buf[i]["start_ip6_addr"].(string); hexaddr_exist {
+				if hexaddr, hexaddrExist := buf[i]["start_ip6_addr"].(string); hexaddrExist {
 					tflog.Debug(s.Ctx, fmt.Sprintf("Suggested IPv6 subnet address: %s\n", hexip6toip6(hexaddr)))
 					subnetAddresses = append(subnetAddresses, hexaddr)
 				}

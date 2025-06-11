@@ -427,7 +427,7 @@ func resourceapplicationnodeRead(ctx context.Context, d *schema.ResourceData, me
 			} else if ip6AddrExist && ip6Addr != "#" {
 				d.Set("address", hexip6toip6(ip6Addr))
 			} else {
-				tflog.Debug(ctx, fmt.Sprintf("Error confilcting addressing IPv4/IPv6 on application node: %s\n", d.Get("name")))
+				tflog.Debug(ctx, fmt.Sprintf("Error conflicting addressing IPv4/IPv6 on application node: %s\n", d.Get("name")))
 			}
 
 			d.Set("application", buf[0]["appapplication_name"].(string))
@@ -507,7 +507,7 @@ func resourceapplicationnodeImportState(ctx context.Context, d *schema.ResourceD
 			} else if ip6AddrExist && ip6Addr != "#" {
 				d.Set("address", hexip6toip6(ip6Addr))
 			} else {
-				tflog.Debug(ctx, fmt.Sprintf("Error confilcting addressing IPv4/IPv6 on application node: %s\n", d.Get("name")))
+				tflog.Debug(ctx, fmt.Sprintf("Error conflicting addressing IPv4/IPv6 on application node: %s\n", d.Get("name")))
 			}
 
 			d.Set("application", buf[0]["appapplication_name"].(string))
