@@ -121,7 +121,7 @@ func deleteIPInterface(ctx context.Context, d *schema.ResourceData, meta interfa
 	iparameters.Add("nomiface_name", ifaceName)
 	iparameters.Add("nomiface_hostaddr", addr)
 
-	// Sending creation request
+	// Sending deletion request
 	resp, body, err := s.Request("delete", "rest/nom_iface_delete", &iparameters)
 
 	if err == nil {
@@ -130,6 +130,39 @@ func deleteIPInterface(ctx context.Context, d *schema.ResourceData, meta interfa
 
 		// Checking the answer
 		if (resp.StatusCode == 200 || resp.StatusCode == 204) && len(buf) > 0 {
+			tflog.Debug(ctx, fmt.Sprintf("Deleted network interface %s:%s\n", d.Get("path").(string)+"/"+ifaceName, addr))
+		} else {
+			// Reporting a failure
+			if len(buf) > 0 {
+				if errMsg, errExist := buf[0]["errmsg"].(string); errExist {
+					tflog.Error(ctx, fmt.Sprintf("Unable to delete network interface address: %s:%s (%s)", d.Get("path").(string)+"/"+ifaceName, addr, errMsg))
+				}
+			} else {
+				tflog.Error(ctx, fmt.Sprintf("Unable to delete network interface address: %s:s\n", d.Get("path").(string)+"/"+ifaceName, addr))
+			}
+		}
+	} else {
+		tflog.Error(ctx, fmt.Sprintf("Unable to delete network interface address: %s:s\n", d.Get("path").(string)+"/"+ifaceName, addr))
+	}
+}
+
+func deleteLastIPInterface(ctx context.Context, d *schema.ResourceData, meta interface{}, parameters url.Values, ifaceName string, addr string) {
+	s := meta.(*SOLIDserver)
+
+	iparameters := parameters
+	iparameters.Add("add_flag", "edit_only")
+	iparameters.Add("nomiface_name", ifaceName)
+	iparameters.Add("nomiface_hostaddr", "")
+
+	// Sending update request (removing only the IP address)
+	resp, body, err := s.Request("delete", "rest/nom_iface_add", &iparameters)
+
+	if err == nil {
+		var buf [](map[string]interface{})
+		json.Unmarshal([]byte(body), &buf)
+
+		// Checking the answer
+		if (resp.StatusCode == 200 || resp.StatusCode == 201) && len(buf) > 0 {
 			tflog.Debug(ctx, fmt.Sprintf("Deleted network interface %s:%s\n", d.Get("path").(string)+"/"+ifaceName, addr))
 		} else {
 			// Reporting a failure
@@ -245,6 +278,8 @@ func resourcenominterfaceUpdate(ctx context.Context, d *schema.ResourceData, met
 	oldaddrs, _ := interfaceSliceToStringSlice(old.([]interface{}))
 	newaddrs, _ := interfaceSliceToStringSlice(new.([]interface{}))
 
+	//FIXME if len(new) == 0 -> do not delete last interface, just set its IP to "" ?
+
 	for _, addr := range newaddrs {
 		j := stringOffsetInSlice(addr, oldaddrs)
 
@@ -259,9 +294,13 @@ func resourcenominterfaceUpdate(ctx context.Context, d *schema.ResourceData, met
 	}
 
 	//Remove remaining IP addresses
-	for _, addr := range oldaddrs {
+	for i, addr := range oldaddrs {
 		tflog.Debug(ctx, fmt.Sprintf("Removing IP address: %s\n", addr))
-		deleteIPInterface(ctx, d, meta, gparameters, ifaceName, addr)
+		//if i == (len(oldaddrs) - 1) {
+		//	deleteLastIPInterface(ctx, d, meta, gparameters, ifaceName, addr)
+		//} else {
+			deleteIPInterface(ctx, d, meta, gparameters, ifaceName, addr)
+		//}
 	}
 
 	// Other interface do not need to be updated
