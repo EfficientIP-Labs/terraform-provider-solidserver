@@ -63,13 +63,6 @@ func resourceippool() *schema.Resource {
 				ForceNew:    false,
 				Default:     false,
 			},
-			"pool_read_only": {
-				Type:        schema.TypeBool,
-				Description: "Specify wether the pool is readyonly, or not (Default: false).",
-				Optional:    true,
-				ForceNew:    false,
-				Default:     false,
-			},
 			"name": {
 				Type:        schema.TypeString,
 				Description: "The name of the IP pool to create.",
@@ -140,13 +133,8 @@ func resourceippoolCreate(ctx context.Context, d *schema.ResourceData, meta inte
 		parameters.Add("pool_read_only", "1")
 		classParameters.Add("dhcprange", "1")
 	} else {
-		classParameters.Add("dhcprange", "0")
-	}
-
-	if d.Get("pool_read_only").(bool) {
-		parameters.Add("pool_read_only", "1")
-	} else {
 		parameters.Add("pool_read_only", "0")
+		classParameters.Add("dhcprange", "0")
 	}
 
 	for k, v := range d.Get("class_parameters").(map[string]interface{}) {
@@ -207,13 +195,8 @@ func resourceippoolUpdate(ctx context.Context, d *schema.ResourceData, meta inte
 		parameters.Add("pool_read_only", "1")
 		classParameters.Add("dhcprange", "1")
 	} else {
-		classParameters.Add("dhcprange", "0")
-	}
-
-	if d.Get("pool_read_only").(bool) {
-		parameters.Add("pool_read_only", "1")
-	} else {
 		parameters.Add("pool_read_only", "0")
+		classParameters.Add("dhcprange", "0")
 	}
 
 	for k, v := range d.Get("class_parameters").(map[string]interface{}) {
@@ -311,12 +294,6 @@ func resourceippoolRead(ctx context.Context, d *schema.ResourceData, meta interf
 			d.Set("name", buf[0]["pool_name"].(string))
 			d.Set("class", buf[0]["pool_class_name"].(string))
 
-			if buf[0]["pool_read_only"] == "1" {
-				d.Set("pool_read_only", true)
-			} else {
-				d.Set("pool_read_only", false)
-
-			}
 			// Updating local class_parameters
 			currentClassParameters := d.Get("class_parameters").(map[string]interface{})
 			retrievedClassParameters, _ := url.ParseQuery(buf[0]["pool_class_parameters"].(string))
