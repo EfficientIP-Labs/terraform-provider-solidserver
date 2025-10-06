@@ -2,13 +2,13 @@ package solidserver
 
 import (
 	"context"
-	"net/url"
-	"regexp"
-
+	"fmt"
 	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+	"net/url"
+	"regexp"
 )
 
 func Provider() *schema.Provider {
@@ -18,7 +18,7 @@ func Provider() *schema.Provider {
 				Type:         schema.TypeString,
 				Required:     true,
 				DefaultFunc:  schema.MultiEnvDefaultFunc([]string{"SOLIDSERVER_HOST", "SOLIDServer_HOST"}, nil),
-				ValidateFunc: validation.StringIsNotEmpty,
+				ValidateFunc: ProviderValidateHost,
 				Description:  "SOLIDServer Hostname or IP address. This can also be specified via the SOLIDSERVER_HOST environment variable.",
 			},
 			"use_token": {
@@ -97,12 +97,12 @@ func Provider() *schema.Provider {
 			"solidserver_dns_view":         dataSourcednsview(),
 			"solidserver_dns_zone":         dataSourcednszone(),
 			//"solidserver_dns_rr":           dataSourcednsrr(),
-			"solidserver_vlan_domain":      dataSourcevlandomain(),
-			"solidserver_vlan_range":       dataSourcevlanrange(),
-			"solidserver_vlan":             dataSourcevlan(),
-			"solidserver_usergroup":        dataSourceusergroup(),
-			"solidserver_cdb":              dataSourcecdb(),
-			"solidserver_cdb_data":         dataSourcecdbdata(),
+			"solidserver_vlan_domain": dataSourcevlandomain(),
+			"solidserver_vlan_range":  dataSourcevlanrange(),
+			"solidserver_vlan":        dataSourcevlan(),
+			"solidserver_usergroup":   dataSourceusergroup(),
+			"solidserver_cdb":         dataSourcecdb(),
+			"solidserver_cdb_data":    dataSourcecdbdata(),
 		},
 
 		ResourcesMap: map[string]*schema.Resource{
@@ -137,6 +137,19 @@ func Provider() *schema.Provider {
 		},
 		ConfigureContextFunc: ProviderConfigure,
 	}
+}
+
+// Validate host format to avoid garbage injection
+func ProviderValidateHost(v interface{}, k string) ([]string, []error) {
+	if match, _ := regexp.MatchString(regexpHostname, v.(string)); match == true {
+		return nil, nil
+	}
+
+	if _, Err := validation.IsIPAddress(v, k); Err == nil {
+		return nil, nil
+	}
+
+	return nil, []error{fmt.Errorf("Unsupported host format (the host must be a FQDN or an IP address).\n")}
 }
 
 func ProviderConfigure(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
