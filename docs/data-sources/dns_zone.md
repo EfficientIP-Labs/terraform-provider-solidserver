@@ -30,7 +30,7 @@ data "solidserver_dns_zone" "myFirstDnsZoneData" {
 ### Read-Only
 
 - `class` (String) The class associated to the DNS zone.
-- `class_parameters` (Map of String) The class parameters associated to IP space.
+- `class_parameters` (Map of String) The class parameters associated to the DNS zone.
 - `createptr` (Boolean) Automaticaly create PTR records for the DNS zone.
 - `dnsserver` (String) The name of DNS server or DNS SMART hosting the DNS zone.
 - `id` (String) The ID of this resource.

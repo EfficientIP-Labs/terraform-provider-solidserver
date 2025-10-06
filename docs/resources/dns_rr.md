@@ -44,7 +44,7 @@ resource "solidserver_dns_rr" "aaRecord" {
 - `dnsserver` (String) The managed SMART DNS server name, or DNS server name hosting the RR's zone.
 - `name` (String) The Fully Qualified Domain Name of the RR to create.
 - `type` (String) The type of the RR to create (Supported: A, AAAA, PTR, CNAME, DNAME and NS).
-- `value` (String) The value od the RR to create.
+- `value` (String) The value of the RR to create.
 
 ### Optional
 

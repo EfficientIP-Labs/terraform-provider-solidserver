@@ -46,6 +46,7 @@ resource "solidserver_ip_address" "myFirstIPAddress" {
 
 ### Optional
 
+- `assignment` (String) An optional IP assignment order within the subnet/pool (Supported: optimized, start, end; Default: optimized).
 - `class` (String) The class associated to the IP address.
 - `class_parameters` (Map of String) The class parameters associated to the IP address.
 - `device` (String) Device Name to associate with the IP address (Require a 'Device Manager' license).
