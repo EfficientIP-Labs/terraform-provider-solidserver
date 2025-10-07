@@ -96,7 +96,7 @@ func Provider() *schema.Provider {
 			"solidserver_dns_server":       dataSourcednsserver(),
 			"solidserver_dns_view":         dataSourcednsview(),
 			"solidserver_dns_zone":         dataSourcednszone(),
-			//"solidserver_dns_rr":           dataSourcednsrr(),
+			//FIXME"solidserver_dns_rr":           dataSourcednsrr(),
 			"solidserver_vlan_domain": dataSourcevlandomain(),
 			"solidserver_vlan_range":  dataSourcevlanrange(),
 			"solidserver_vlan":        dataSourcevlan(),
@@ -186,7 +186,7 @@ func validateProxyURLValue(value interface{}, path cty.Path) diag.Diagnostics {
 		// https://pkg.go.dev/net/http#Transport
 		validSchemes := map[string]bool{"http": true, "https": true, "socks5": true}
 		if _, ok := validSchemes[proxyURL.Scheme]; !ok {
-			return diag.FromErr(path.NewErrorf("unsupported proxy url scheme: %s", proxyURL.Scheme))
+			return diag.FromErr(path.NewErrorf("Unsupported proxy URL scheme: %s", proxyURL.Scheme))
 		}
 	}
 
