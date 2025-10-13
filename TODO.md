@@ -6,7 +6,7 @@
 - [X] Implement support for Subnet/VLAN relationship
 - [ ] Implement support for SOLIDserver resources covering (NTP/SNMP/Admin & ipmadmin Passwords/Certificat SSL/Services)
 - [ ] Increase test coverage based on https://www.terraform.io/docs/extend/testing/acceptance-tests/index.html
-- [ ] Consider migrating to Terraform Plugin Framework (https://developer.hashicorp.com/terraform/plugin/framework) | https://github.com/hashicorp/terraform-provider-scaffolding-framework
+- [ ] Consider migrating to Terraform Plugin Framework (https://developer.hashicorp.com/terraform/plugin/framework/migrating) | https://github.com/hashicorp/terraform-provider-scaffolding-framework
 
 # Useful Links
 
