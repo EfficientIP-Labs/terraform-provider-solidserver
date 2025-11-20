@@ -1,6 +1,6 @@
 module github.com/EfficientIP-Labs/terraform-provider-solidserver/tools
 
-go 1.19
+go 1.24.0
 
 require github.com/hashicorp/terraform-plugin-docs v0.13.0
 
@@ -33,7 +33,7 @@ require (
 	github.com/shopspring/decimal v1.3.1 // indirect
 	github.com/spf13/cast v1.5.0 // indirect
 	github.com/zclconf/go-cty v1.10.0 // indirect
-	golang.org/x/crypto v0.35.0 // indirect
-	golang.org/x/sys v0.30.0 // indirect
-	golang.org/x/text v0.22.0 // indirect
+	golang.org/x/crypto v0.45.0 // indirect
+	golang.org/x/sys v0.38.0 // indirect
+	golang.org/x/text v0.31.0 // indirect
 )
