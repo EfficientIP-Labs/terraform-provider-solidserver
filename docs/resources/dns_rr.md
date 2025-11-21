@@ -2,12 +2,12 @@
 page_title: "solidserver_dns_rr Resource - SOLIDserver"
 subcategory: ""
 description: |-
-  DNS RR resource allows to create and manage DNS resource records of type A, AAAA, PTR, CNAME, DNAME, NS.
+  DNS RR resource allows to create and manage DNS resource records of type A, AAAA, PTR, CNAME, DNAME, TXT, NS.
 ---
 
 # solidserver_dns_rr (Resource)
 
-DNS RR resource allows to create and manage DNS resource records of type A, AAAA, PTR, CNAME, DNAME, NS.
+DNS RR resource allows to create and manage DNS resource records of type A, AAAA, PTR, CNAME, DNAME, TXT, NS.
 
 ## Example Usage
 
@@ -43,8 +43,8 @@ resource "solidserver_dns_rr" "aaRecord" {
 
 - `dnsserver` (String) The managed SMART DNS server name, or DNS server name hosting the RR's zone.
 - `name` (String) The Fully Qualified Domain Name of the RR to create.
-- `type` (String) The type of the RR to create (Supported: A, AAAA, PTR, CNAME, DNAME and NS).
-- `value` (String) The value od the RR to create.
+- `type` (String) The type of the RR to create (Supported: A, AAAA, PTR, CNAME, DNAME, TXT, and NS).
+- `value` (String) The value of the RR to create.
 
 ### Optional
 

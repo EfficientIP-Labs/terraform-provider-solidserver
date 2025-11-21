@@ -62,7 +62,7 @@ func resourceipaddress() *schema.Resource {
 				Description:  "An optional IP assignment order within the parent subnet/pool (Supported: optimized, start, end; Default: optimized).",
 				ValidateFunc: validation.StringInSlice([]string{"optimized", "start", "end"}, false),
 				Optional:     true,
-				ForceNew:     true,
+				ForceNew:     false,
 				Default:      "optimized",
 			},
 			"address": {

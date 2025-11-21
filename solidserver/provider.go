@@ -2,13 +2,13 @@ package solidserver
 
 import (
 	"context"
-	"net/url"
-	"regexp"
-
+	"fmt"
 	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+	"net/url"
+	"regexp"
 )
 
 func Provider() *schema.Provider {
@@ -18,7 +18,7 @@ func Provider() *schema.Provider {
 				Type:         schema.TypeString,
 				Required:     true,
 				DefaultFunc:  schema.MultiEnvDefaultFunc([]string{"SOLIDSERVER_HOST", "SOLIDServer_HOST"}, nil),
-				ValidateFunc: validation.StringIsNotEmpty,
+				ValidateFunc: ProviderValidateHost,
 				Description:  "SOLIDServer Hostname or IP address. This can also be specified via the SOLIDSERVER_HOST environment variable.",
 			},
 			"use_token": {
@@ -96,7 +96,7 @@ func Provider() *schema.Provider {
 			"solidserver_dns_server":       dataSourcednsserver(),
 			"solidserver_dns_view":         dataSourcednsview(),
 			"solidserver_dns_zone":         dataSourcednszone(),
-			//"solidserver_dns_rr":           dataSourcednsrr(),
+			//FIXME"solidserver_dns_rr":           dataSourcednsrr(),
 			"solidserver_vlan_domain": dataSourcevlandomain(),
 			"solidserver_vlan_range":  dataSourcevlanrange(),
 			"solidserver_vlan":        dataSourcevlan(),
@@ -142,6 +142,19 @@ func Provider() *schema.Provider {
 	}
 }
 
+// Validate host format to avoid garbage injection
+func ProviderValidateHost(v interface{}, k string) ([]string, []error) {
+	if match, _ := regexp.MatchString(regexpHostname, v.(string)); match == true {
+		return nil, nil
+	}
+
+	if _, Err := validation.IsIPAddress(v, k); Err == nil {
+		return nil, nil
+	}
+
+	return nil, []error{fmt.Errorf("Unsupported host format (the host must be a FQDN or an IP address).\n")}
+}
+
 func ProviderConfigure(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
 	s, err := NewSOLIDserver(
 		ctx,
@@ -176,7 +189,7 @@ func validateProxyURLValue(value interface{}, path cty.Path) diag.Diagnostics {
 		// https://pkg.go.dev/net/http#Transport
 		validSchemes := map[string]bool{"http": true, "https": true, "socks5": true}
 		if _, ok := validSchemes[proxyURL.Scheme]; !ok {
-			return diag.FromErr(path.NewErrorf("unsupported proxy url scheme: %s", proxyURL.Scheme))
+			return diag.FromErr(path.NewErrorf("Unsupported proxy URL scheme: %s", proxyURL.Scheme))
 		}
 	}
 
