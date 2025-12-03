@@ -299,7 +299,7 @@ func resourcenominterfaceUpdate(ctx context.Context, d *schema.ResourceData, met
 		//if i == (len(oldaddrs) - 1) {
 		//	deleteLastIPInterface(ctx, d, meta, gparameters, ifaceName, addr)
 		//} else {
-			deleteIPInterface(ctx, d, meta, gparameters, ifaceName, addr)
+		deleteIPInterface(ctx, d, meta, gparameters, ifaceName, addr)
 		//}
 	}
 
