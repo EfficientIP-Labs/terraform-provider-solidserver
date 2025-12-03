@@ -1,6 +1,7 @@
 package solidserver
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -10,6 +11,7 @@ import (
 	"net/netip"
 	"net/url"
 	"reflect"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -1816,4 +1818,44 @@ func dnsdeletefromsmart(smartName string, serverName string, meta interface{}) b
 	}
 
 	return false
+}
+
+// Decorator enforcing class parameter validation using CustomizeDiff
+// Keeps existing CustomizeDiff from resources
+func WithClassParametersValidation(r *schema.Resource) *schema.Resource {
+	// If resource already has a CustomizeDiff, wrap it
+	existing := r.CustomizeDiff
+
+	r.CustomizeDiff = func(ctx context.Context, d *schema.ResourceDiff, meta interface{}) error {
+		// run existing diff if any
+		if existing != nil {
+			if err := existing(ctx, d, meta); err != nil {
+				return err
+			}
+		}
+
+		raw := d.Get("class_parameters")
+		if raw == nil {
+			return nil
+		}
+
+		cp, ok := raw.(map[string]interface{})
+		if !ok {
+			return nil
+		}
+
+		pattern := regexp.MustCompile(`^[0-9a-zA-Z_]+$`)
+		for k := range cp {
+			if !pattern.MatchString(k) {
+				return fmt.Errorf(
+					"invalid class_parameter key: %q (allowed: alphanumeric and underscores)",
+					k,
+				)
+			}
+		}
+
+		return nil
+	}
+
+	return r
 }
