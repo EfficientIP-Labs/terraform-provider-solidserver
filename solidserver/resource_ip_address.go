@@ -115,11 +115,6 @@ func resourceipaddress() *schema.Resource {
 	}
 }
 
-// resourcediffsuppressassignmentandrequestip suppresses diffs for assignment and request_ip fields.
-func resourcediffsuppress(k, old, new string, d *schema.ResourceData) bool {
-	return true
-}
-
 func resourceipaddressCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 

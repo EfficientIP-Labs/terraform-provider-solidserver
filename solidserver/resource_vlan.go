@@ -43,11 +43,12 @@ func resourcevlan() *schema.Resource {
 				Default:  "",
 			},
 			"request_id": {
-				Type:        schema.TypeInt,
-				Description: "The optionally requested vlan ID.",
-				Optional:    true,
-				ForceNew:    true,
-				Default:     0,
+				Type:             schema.TypeInt,
+				Description:      "The optionally requested vlan ID.",
+				DiffSuppressFunc: resourcediffsuppress,
+				Optional:         true,
+				ForceNew:         true,
+				Default:          0,
 			},
 			"vlan_id": {
 				Type:        schema.TypeInt,
