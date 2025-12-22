@@ -53,6 +53,7 @@ func resourceipaddress() *schema.Resource {
 				Type:         schema.TypeString,
 				Description:  "The optionally requested IP address.",
 				ValidateFunc: validation.IsIPAddress,
+				DiffSuppressFunc: resourcediffsuppress,
 				Optional:     true,
 				ForceNew:     true,
 				Default:      "",
@@ -62,6 +63,7 @@ func resourceipaddress() *schema.Resource {
 				Description:  "An optional IP assignment order within the subnet/pool (Supported: optimized, start, end; Default: optimized).",
 				ValidateFunc: validation.StringInSlice([]string{"optimized", "start", "end"}, false),
 				Optional:     true,
+				DiffSuppressFunc: resourcediffsuppress,
 				ForceNew:     false,
 				Default:      "optimized",
 			},
@@ -111,6 +113,11 @@ func resourceipaddress() *schema.Resource {
 			},
 		},
 	}
+}
+
+// resourcediffsuppressassignmentandrequestip suppresses diffs for assignment and request_ip fields.
+func resourcediffsuppress(k, old, new string, d *schema.ResourceData) bool {
+	return true
 }
 
 func resourceipaddressCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
