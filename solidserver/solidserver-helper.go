@@ -271,7 +271,12 @@ func longtoip(iplong uint32) string {
 }
 
 // Ignore any change comparing remote and local value
+// Ignore any change comparing remote and local value, except during resource creation
 func resourcediffsuppress(k, old, new string, d *schema.ResourceData) bool {
+	// During creation, ID is not set
+	if d.Id() == "" {
+		 return false
+	}
 	return true
 }
 
@@ -1166,7 +1171,9 @@ func ipsubnetfindbysize(siteID string, blockID string, requestedIP string, prefi
 	}
 
 	// Trying to create a subnet under an existing block
-	parameters.Add("block_id", blockID)
+	if len(blockID)	 > 0 {
+		parameters.Add("block_id", blockID)
+	}
 
 	// Sending the creation request
 	resp, body, err := s.Request("get", "rpc/ip_find_free_subnet", &parameters)
@@ -1213,7 +1220,9 @@ func ip6subnetfindbysize(siteID string, blockID string, requestedIP string, pref
 	}
 
 	// Trying to create a subnet under an existing block
-	parameters.Add("block6_id", blockID)
+	if len(blockID)	 > 0 {
+		parameters.Add("block6_id", blockID)
+	}
 
 	// Sending the creation request
 	resp, body, err := s.Request("get", "rpc/ip6_find_free_subnet6", &parameters)
