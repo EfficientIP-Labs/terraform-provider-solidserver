@@ -311,6 +311,11 @@ func longtoip(iplong uint32) string {
 	return fmt.Sprintf("%d.%d.%d.%d", a, b, c, d)
 }
 
+// Ignore any change comparing remote and local value
+func resourcediffsuppress(k, old, new string, d *schema.ResourceData) bool {
+	return true
+}
+
 // Ignore Case When comparing remote and local value
 func resourcediffsuppresscase(k, old, new string, d *schema.ResourceData) bool {
 	if strings.ToLower(old) == strings.ToLower(new) {
