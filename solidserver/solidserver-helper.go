@@ -275,7 +275,7 @@ func longtoip(iplong uint32) string {
 func resourcediffsuppress(k, old, new string, d *schema.ResourceData) bool {
 	// During creation, ID is not set
 	if d.Id() == "" {
-		 return false
+		return false
 	}
 	return true
 }
@@ -1171,7 +1171,7 @@ func ipsubnetfindbysize(siteID string, blockID string, requestedIP string, prefi
 	}
 
 	// Trying to create a subnet under an existing block
-	if len(blockID)	 > 0 {
+	if len(blockID) > 0 {
 		parameters.Add("block_id", blockID)
 	}
 
@@ -1220,7 +1220,7 @@ func ip6subnetfindbysize(siteID string, blockID string, requestedIP string, pref
 	}
 
 	// Trying to create a subnet under an existing block
-	if len(blockID)	 > 0 {
+	if len(blockID) > 0 {
 		parameters.Add("block6_id", blockID)
 	}
 
