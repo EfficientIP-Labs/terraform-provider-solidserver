@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"net/url"
 	"strconv"
 	"strings"
@@ -15,13 +16,29 @@ import (
 
 func resourcednsrr() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourcednsrrCreate,
-		ReadContext:   resourcednsrrRead,
-		UpdateContext: resourcednsrrUpdate,
-		DeleteContext: resourcednsrrDelete,
-		Importer: &schema.ResourceImporter{
-			StateContext: resourcednsrrImportState,
-		},
+        CreateContext: resourcednsrrCreate,
+        ReadContext:   resourcednsrrRead,
+        UpdateContext: resourcednsrrUpdate,
+        DeleteContext: resourcednsrrDelete,
+
+        CustomizeDiff: func(ctx context.Context, diff *schema.ResourceDiff, meta interface{}) error {
+            rrType := strings.ToUpper(diff.Get("type").(string))
+            _, preferenceSet := diff.GetOkExists("preference")
+
+            if rrType == "MX" && !preferenceSet {
+                return fmt.Errorf("preference must be specified when type is MX")
+            }
+
+            if rrType != "MX" && preferenceSet {
+                return fmt.Errorf("preference can only be specified when type is MX")
+            }
+
+            return nil
+        },
+
+        Importer: &schema.ResourceImporter{
+            StateContext: resourcednsrrImportState,
+        },
 
 		Description: heredoc.Doc(`
 			DNS RR resource allows to create and manage DNS resource records of type A, AAAA, PTR, CNAME, DNAME, TXT, NS.
@@ -56,7 +73,7 @@ func resourcednsrr() *schema.Resource {
 			},
 			"type": {
 				Type:         schema.TypeString,
-				Description:  "The type of the RR to create (Supported: A, AAAA, PTR, CNAME, DNAME, TXT, and NS).",
+				Description:  "The type of the RR to create (Supported: A, AAAA, PTR, CNAME, DNAME, TXT, MX and NS).",
 				ValidateFunc: resourcednsrrvalidatetype,
 				Required:     true,
 				ForceNew:     true,
@@ -91,6 +108,13 @@ func resourcednsrr() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
+            "preference": {
+                Type:         schema.TypeInt,
+                Description:  "The MX preference. Lower values have higher priority. Required for MX records and forbidden for other record types.",
+                Optional:     true,
+                Computed:     false,
+                ValidateFunc: validation.IntBetween(0, 65535),
+            },
 		},
 	}
 }
@@ -111,6 +135,8 @@ func resourcednsrrvalidatetype(v interface{}, _ string) ([]string, []error) {
 		return nil, nil
 	case "NS":
 		return nil, nil
+	case "MX":
+        return nil, nil
 	default:
 		return nil, []error{fmt.Errorf("Unsupported RR type.")}
 	}
@@ -124,8 +150,16 @@ func resourcednsrrCreate(ctx context.Context, d *schema.ResourceData, meta inter
 	parameters.Add("add_flag", "new_only")
 	parameters.Add("dns_name", d.Get("dnsserver").(string))
 	parameters.Add("rr_name", d.Get("name").(string))
-	parameters.Add("rr_type", strings.ToUpper(d.Get("type").(string)))
-	parameters.Add("value1", d.Get("value").(string))
+	rrType := strings.ToUpper(d.Get("type").(string))
+    parameters.Add("rr_type", rrType)
+
+    if rrType == "MX" {
+        parameters.Add("value1", strconv.Itoa(d.Get("preference").(int)))
+        parameters.Add("value2", d.Get("value").(string))
+    } else {
+        parameters.Add("value1", d.Get("value").(string))
+    }
+
 	parameters.Add("rr_ttl", strconv.Itoa(d.Get("ttl").(int)))
 
 	// Add dnsview parameter if it is supplied
@@ -189,8 +223,16 @@ func resourcednsrrUpdate(ctx context.Context, d *schema.ResourceData, meta inter
 	parameters.Add("add_flag", "edit_only")
 	parameters.Add("dns_name", d.Get("dnsserver").(string))
 	parameters.Add("rr_name", d.Get("name").(string))
-	parameters.Add("rr_type", strings.ToUpper(d.Get("type").(string)))
-	parameters.Add("value1", d.Get("value").(string))
+	rrType := strings.ToUpper(d.Get("type").(string))
+    parameters.Add("rr_type", rrType)
+
+    if rrType == "MX" {
+        parameters.Add("value1", strconv.Itoa(d.Get("preference").(int)))
+        parameters.Add("value2", d.Get("value").(string))
+    } else {
+        parameters.Add("value1", d.Get("value").(string))
+    }
+
 	parameters.Add("rr_ttl", strconv.Itoa(d.Get("ttl").(int)))
 
 	// Add dnsview parameter if it is supplied
@@ -293,15 +335,24 @@ func resourcednsrrRead(ctx context.Context, d *schema.ResourceData, meta interfa
 
 	// Sending the read request
 	// We do not rely on the ID that may change due to DNS behavior
-	whereClause := "dns_name='" + d.Get("dnsserver").(string) + "' AND rr_full_name='" + d.Get("name").(string) + "' AND rr_type='" + strings.ToUpper(d.Get("type").(string))
+	rrType := strings.ToUpper(d.Get("type").(string))
 
-	if strings.ToUpper(d.Get("type").(string)) == "AAAA" {
-		value := shortip6tolongip6(d.Get("value").(string))
-		tflog.Debug(ctx, fmt.Sprintf("Using Expanded IPv6 format: %s\n", value))
-		whereClause += "' AND value1='" + value + "' "
-	} else {
-		whereClause += "' AND value1='" + d.Get("value").(string) + "' "
-	}
+    whereClause := "dns_name='" + d.Get("dnsserver").(string) +
+        "' AND rr_full_name='" + d.Get("name").(string) +
+        "' AND rr_type='" + rrType
+
+    if rrType == "MX" {
+    whereClause += "' AND value1='" +
+        strconv.Itoa(d.Get("preference").(int)) +
+        "' AND value2='" +
+        d.Get("value").(string) +
+        "' "
+    } else if rrType == "AAAA" {
+        value := shortip6tolongip6(d.Get("value").(string))
+        whereClause += "' AND value1='" + value + "' "
+    } else {
+        whereClause += "' AND value1='" + d.Get("value").(string) + "' "
+    }
 
 	// Handle dnsview parameter
 	if len(d.Get("dnsview").(string)) != 0 {
@@ -334,11 +385,15 @@ func resourcednsrrRead(ctx context.Context, d *schema.ResourceData, meta interfa
 			d.Set("name", buf[0]["rr_full_name"].(string))
 			d.Set("type", buf[0]["rr_type"].(string))
 
-			if strings.ToUpper(buf[0]["rr_type"].(string)) == "AAAA" {
-				d.Set("value", longip6toshortip6(buf[0]["value1"].(string)))
-			} else {
-				d.Set("value", buf[0]["value1"].(string))
-			}
+			if strings.ToUpper(buf[0]["rr_type"].(string)) == "MX" {
+                preference, _ := strconv.Atoi(buf[0]["value1"].(string))
+                d.Set("preference", preference)
+                d.Set("value", buf[0]["value2"].(string))
+            } else if strings.ToUpper(buf[0]["rr_type"].(string)) == "AAAA" {
+                d.Set("value", longip6toshortip6(buf[0]["value1"].(string)))
+            } else {
+                d.Set("value", buf[0]["value1"].(string))
+            }
 
 			d.Set("ttl", ttl)
 
@@ -411,11 +466,16 @@ func resourcednsrrImportState(ctx context.Context, d *schema.ResourceData, meta 
 			d.Set("name", buf[0]["rr_full_name"].(string))
 			d.Set("type", buf[0]["rr_type"].(string))
 
-			if strings.ToUpper(buf[0]["rr_type"].(string)) == "AAAA" {
-				d.Set("value", longip6toshortip6(buf[0]["value1"].(string)))
-			} else {
-				d.Set("value", buf[0]["value1"].(string))
-			}
+			if strings.ToUpper(buf[0]["rr_type"].(string)) == "MX" {
+                preference, _ := strconv.Atoi(buf[0]["value1"].(string))
+
+                d.Set("preference", preference)
+                d.Set("value", buf[0]["value2"].(string))
+            } else if strings.ToUpper(buf[0]["rr_type"].(string)) == "AAAA" {
+                d.Set("value", longip6toshortip6(buf[0]["value1"].(string)))
+            } else {
+                d.Set("value", buf[0]["value1"].(string))
+            }
 
 			d.Set("ttl", ttl)
 
