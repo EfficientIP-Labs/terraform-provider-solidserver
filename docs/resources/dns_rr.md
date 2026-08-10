@@ -43,7 +43,7 @@ resource "solidserver_dns_rr" "aaRecord" {
 
 - `dnsserver` (String) The managed SMART DNS server name, or DNS server name hosting the RR's zone.
 - `name` (String) The Fully Qualified Domain Name of the RR to create.
-- `type` (String) The type of the RR to create (Supported: A, AAAA, PTR, CNAME, DNAME, TXT, and NS).
+- `type` (String) The type of the RR to create (Supported: A, AAAA, PTR, CNAME, DNAME, TXT, MX and NS).
 - `value` (String) The value of the RR to create.
 
 ### Optional
@@ -52,6 +52,7 @@ resource "solidserver_dns_rr" "aaRecord" {
 - `class_parameters` (Map of String) The class parameters associated to the view.
 - `dnsview` (String) The View name of the RR to create.
 - `dnszone` (String) The Zone name of the RR to create.
+- `preference` (Number) The MX preference. Lower values have higher priority. Required for MX records and forbidden for other record types.
 - `ttl` (Number) The DNS Time To Live of the RR to create.
 
 ### Read-Only
