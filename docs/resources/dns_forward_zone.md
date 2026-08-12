@@ -34,6 +34,7 @@ resource "solidserver_dns_forward_zone" "myFirstForwardZone" {
 - `dnsview` (String) The DNS view name hosting the forward zone.
 - `forward` (String) The forwarding mode of the forward zone (Supported: only, first; Default: only).
 - `forwarders` (List of String) The IP address list of the forwarder(s) to use for the forward zone.
+- `space` (String) The name of a space associated to the zone.
 
 ### Read-Only
 
