@@ -47,6 +47,13 @@ func resourcednsforwardzone() *schema.Resource {
 				Required:    true,
 				ForceNew:    true,
 			},
+            "space": {
+                    Type:        schema.TypeString,
+                    Description: "The name of a space associated to the zone.",
+                    Optional:    true,
+                    ForceNew:    false,
+                    Default:     "",
+                },
 			"forward": {
 				Type:         schema.TypeString,
 				Description:  "The forwarding mode of the forward zone (Supported: only, first; Default: only).",
@@ -85,6 +92,13 @@ func resourcednsforwardzone() *schema.Resource {
 func resourcednsforwardzoneCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
+	// Gather required ID(s) from provided information
+	siteID, siteErr := ipsiteidbyname(d.Get("space").(string), meta)
+	if siteErr != nil {
+		// Reporting a failure
+		return diag.FromErr(siteErr)
+	}
+
 	// Building parameters
 	parameters := url.Values{}
 	parameters.Add("add_flag", "new_only")
@@ -95,6 +109,7 @@ func resourcednsforwardzoneCreate(ctx context.Context, d *schema.ResourceData, m
 	parameters.Add("dnszone_name", d.Get("name").(string))
 	parameters.Add("dnszone_type", "forward")
 	parameters.Add("dnszone_class_name", d.Get("class").(string))
+	parameters.Add("dnszone_site_id", siteID)
 
 	// Building forwarder list
 	parameters.Add("dnszone_forward", strings.ToLower(d.Get("forward").(string)))
@@ -143,11 +158,19 @@ func resourcednsforwardzoneCreate(ctx context.Context, d *schema.ResourceData, m
 func resourcednsforwardzoneUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	s := meta.(*SOLIDserver)
 
+	// Gather required ID(s) from provided information
+	siteID, siteErr := ipsiteidbyname(d.Get("space").(string), meta)
+	if siteErr != nil {
+		// Reporting a failure
+		return diag.FromErr(siteErr)
+	}
+
 	// Building parameters
 	parameters := url.Values{}
 	parameters.Add("dnszone_id", d.Id())
 	parameters.Add("add_flag", "edit_only")
 	parameters.Add("dnszone_class_name", d.Get("class").(string))
+	parameters.Add("dnszone_site_id", siteID)
 
 	// Building forwarder list
 	parameters.Add("dnszone_forward", strings.ToLower(d.Get("forward").(string)))
@@ -253,6 +276,12 @@ func resourcednsforwardzoneRead(ctx context.Context, d *schema.ResourceData, met
 			d.Set("dnsview", buf[0]["dnsview_name"].(string))
 			d.Set("name", buf[0]["dnszone_name"].(string))
 
+            if buf[0]["dnszone_site_name"].(string) != "#" {
+				d.Set("space", buf[0]["dnszone_site_name"].(string))
+			} else {
+				d.Set("space", "")
+			}
+
 			// Updating forward mode
 			if buf[0]["dnszone_forward"].(string) == "" {
 				d.Set("forward", "none")
@@ -329,6 +358,12 @@ func resourcednsforwardzoneImportState(ctx context.Context, d *schema.ResourceDa
 			d.Set("dnsview", buf[0]["dnsview_name"].(string))
 			d.Set("name", buf[0]["dnszone_name"].(string))
 			d.Set("type", buf[0]["dnszone_type"].(string))
+
+            if buf[0]["dnszone_site_name"].(string) != "#" {
+				d.Set("space", buf[0]["dnszone_site_name"].(string))
+			} else {
+				d.Set("space", "")
+			}
 
 			// Updating forward mode
 			if buf[0]["dnszone_forward"].(string) == "" {
